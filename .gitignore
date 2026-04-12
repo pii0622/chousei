@@ -51,3 +51,4 @@ prisma/dev.db-journal
 # Cloudflare
 .worker-next
 .wrangler
+.open-next
