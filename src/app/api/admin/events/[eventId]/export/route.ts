@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 
 // GET export reservations as CSV
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
+  const prisma = await getPrisma();
   const { eventId } = await params;
   const url = new URL(request.url);
   const format = url.searchParams.get("format") || "csv";

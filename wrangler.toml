@@ -1,0 +1,17 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "chousei"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Cloudflare Pages
+pages_build_output_dir = ".worker-next"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "chousei-db"
+database_id = "YOUR_D1_DATABASE_ID"
+migrations_dir = "d1-migrations"
+
+[vars]
+ADMIN_PASSWORD = "admin123"
+NEXT_PUBLIC_APP_URL = "https://chousei.pages.dev"

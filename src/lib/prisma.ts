@@ -1,10 +1,23 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaD1 } from "@prisma/adapter-d1";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+let localPrisma: PrismaClient | undefined;
 
-export const prisma =
-  globalForPrisma.prisma ?? new PrismaClient();
+export async function getPrisma(): Promise<PrismaClient> {
+  try {
+    const { env } = await getCloudflareContext();
+    const db = (env as Record<string, unknown>).DB as D1Database;
+    if (db) {
+      const adapter = new PrismaD1(db);
+      return new PrismaClient({ adapter }) as PrismaClient;
+    }
+  } catch {
+    // Not running on Cloudflare — use local SQLite
+  }
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+  if (!localPrisma) {
+    localPrisma = new PrismaClient();
+  }
+  return localPrisma;
+}

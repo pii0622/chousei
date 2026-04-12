@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 
 // GET single event with reservations
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
+  const prisma = await getPrisma();
   const { eventId } = await params;
   const event = await prisma.event.findUnique({
     where: { id: eventId },
@@ -33,8 +34,15 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
+  const prisma = await getPrisma();
   const { eventId } = await params;
-  const body = await request.json();
+  const body = (await request.json()) as {
+    title: string;
+    description?: string;
+    date: string;
+    location?: string;
+    timeSlots?: { startTime: string; endTime: string; capacity: number }[];
+  };
   const { title, description, date, location, timeSlots } = body;
 
   // Delete existing time slots and recreate
@@ -80,6 +88,7 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
+  const prisma = await getPrisma();
   const { eventId } = await params;
   await prisma.event.delete({ where: { id: eventId } });
   return NextResponse.json({ ok: true });

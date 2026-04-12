@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
-  const { password } = await request.json();
+  const { password } = (await request.json()) as { password: string };
   const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
 
   if (password === adminPassword) {
