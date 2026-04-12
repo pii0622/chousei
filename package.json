@@ -4,12 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npx prisma generate && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "build:worker": "npx prisma generate && opennextjs-cloudflare",
-    "preview": "npm run build:worker && wrangler dev",
-    "deploy": "npm run build:worker && wrangler pages deploy",
+    "build:cf": "prisma generate && opennextjs-cloudflare build",
+    "preview": "npm run build:cf && wrangler dev",
+    "deploy": "npm run build:cf && wrangler pages deploy",
     "d1:migrate": "wrangler d1 migrations apply chousei-db",
     "d1:migrate:local": "wrangler d1 migrations apply chousei-db --local"
   },
