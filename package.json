@@ -4,11 +4,18 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npx prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:worker": "npx prisma generate && opennextjs-cloudflare",
+    "preview": "npm run build:worker && wrangler dev",
+    "deploy": "npm run build:worker && wrangler pages deploy",
+    "d1:migrate": "wrangler d1 migrations apply chousei-db",
+    "d1:migrate:local": "wrangler d1 migrations apply chousei-db --local"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.19.1",
+    "@prisma/adapter-d1": "^6.19.3",
     "@prisma/client": "^6.19.3",
     "next": "16.2.3",
     "nodemailer": "^8.0.5",
@@ -16,9 +23,11 @@
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "wrangler": "^4.81.1"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260412.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.0",

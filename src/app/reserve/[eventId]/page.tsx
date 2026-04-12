@@ -44,7 +44,7 @@ export default function ReservePage() {
 
   useEffect(() => {
     fetch(`/api/events/${eventId}`)
-      .then((r) => r.json())
+      .then((r) => r.json() as Promise<Event & { error?: string }>)
       .then((data) => {
         if (data.error) {
           setError("イベントが見つかりません");
@@ -80,7 +80,7 @@ export default function ReservePage() {
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = (await res.json()) as { error?: string };
         setError(data.error || "予約に失敗しました");
         return;
       }

@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 import { sendMail } from "@/lib/mail";
 import { generateGoogleCalendarUrl, generateICS } from "@/lib/calendar";
 
 // POST create reservation
 export async function POST(request: Request) {
-  const body = await request.json();
+  const prisma = await getPrisma();
+  const body = (await request.json()) as {
+    timeSlotId?: string;
+    name?: string;
+    email?: string;
+    partySize?: number;
+  };
   const { timeSlotId, name, email, partySize = 1 } = body;
 
   if (!timeSlotId || !name || !email) {

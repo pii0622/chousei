@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 
 // GET all events
 export async function GET() {
+  const prisma = await getPrisma();
   const events = await prisma.event.findMany({
     include: {
       timeSlots: {
@@ -19,7 +20,14 @@ export async function GET() {
 
 // POST create event
 export async function POST(request: Request) {
-  const body = await request.json();
+  const prisma = await getPrisma();
+  const body = (await request.json()) as {
+    title: string;
+    description?: string;
+    date: string;
+    location?: string;
+    timeSlots?: { startTime: string; endTime: string; capacity: number }[];
+  };
   const { title, description, date, location, timeSlots } = body;
 
   const event = await prisma.event.create({

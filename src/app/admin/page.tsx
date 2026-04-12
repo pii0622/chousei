@@ -25,7 +25,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetch("/api/events")
-      .then((r) => r.json())
+      .then((r) => r.json() as Promise<Event[]>)
       .then(setEvents)
       .finally(() => setLoading(false));
   }, []);

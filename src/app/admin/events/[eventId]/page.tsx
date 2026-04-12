@@ -50,7 +50,7 @@ export default function EventDetailPage() {
 
   useEffect(() => {
     fetch(`/api/events/${eventId}`)
-      .then((r) => r.json())
+      .then((r) => r.json() as Promise<Event & { error?: string }>)
       .then((data) => {
         if (!data.error) setEvent(data);
       })
@@ -81,7 +81,7 @@ export default function EventDetailPage() {
       const res = await fetch(`/api/admin/events/${eventId}/reminders`, {
         method: "POST",
       });
-      const data = await res.json();
+      const data = (await res.json()) as { sent: number; failed: number; total: number };
       setReminderResult(
         `送信完了: ${data.sent}件成功 / ${data.failed}件失敗 (合計${data.total}件)`
       );

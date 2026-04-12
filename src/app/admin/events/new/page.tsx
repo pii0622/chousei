@@ -86,7 +86,7 @@ export default function NewEventPage() {
         return;
       }
 
-      const event = await res.json();
+      const event = (await res.json()) as { id: string };
       router.push(`/admin/events/${event.id}`);
     } catch {
       setError("イベントの作成に失敗しました");
