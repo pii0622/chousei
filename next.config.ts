@@ -5,8 +5,6 @@ if (process.env.NODE_ENV === "development") {
   initOpenNextCloudflareForDev();
 }
 
-const nextConfig: NextConfig = {
-  serverExternalPackages: ["@prisma/client", "@prisma/adapter-d1"],
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;

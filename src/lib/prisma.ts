@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaD1 } from "@prisma/adapter-d1";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
@@ -10,7 +10,7 @@ export async function getPrisma(): Promise<PrismaClient> {
     const db = (env as Record<string, unknown>).DB as D1Database;
     if (db) {
       const adapter = new PrismaD1(db);
-      return new PrismaClient({ adapter }) as PrismaClient;
+      return new PrismaClient({ adapter });
     }
   } catch {
     // Not running on Cloudflare — use local SQLite
