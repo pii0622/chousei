@@ -14,7 +14,7 @@ directory = ".open-next/assets"
 binding = "DB"
 database_name = "chousei-db"
 database_id = "876d56d7-77d5-483f-90e2-93d8f2d41130"
-migrations_dir = "d1-migrations"
+migrations_dir = "drizzle"
 
 [vars]
 ADMIN_PASSWORD = "admin123"

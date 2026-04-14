@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { getPrisma } from "@/lib/prisma";
+import { eq, asc } from "drizzle-orm";
+import { getDb } from "@/db";
+import { events, timeSlots } from "@/db/schema";
 import { sendMail } from "@/lib/mail";
 
 // POST send reminder emails to all reservations for an event
@@ -7,15 +9,15 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
-  const prisma = await getPrisma();
+  const db = await getDb();
   const { eventId } = await params;
 
-  const event = await prisma.event.findUnique({
-    where: { id: eventId },
-    include: {
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+    with: {
       timeSlots: {
-        orderBy: { sortOrder: "asc" },
-        include: { reservations: true },
+        orderBy: asc(timeSlots.sortOrder),
+        with: { reservations: true },
       },
     },
   });
