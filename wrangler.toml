@@ -1,10 +1,14 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "chousei"
 compatibility_date = "2025-04-01"
-compatibility_flags = ["nodejs_compat"]
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 
-# Cloudflare Pages
-pages_build_output_dir = ".open-next"
+# Cloudflare Workers (using @opennextjs/cloudflare)
+main = ".open-next/worker.js"
+
+[assets]
+binding = "ASSETS"
+directory = ".open-next/assets"
 
 [[d1_databases]]
 binding = "DB"
@@ -14,4 +18,4 @@ migrations_dir = "d1-migrations"
 
 [vars]
 ADMIN_PASSWORD = "admin123"
-NEXT_PUBLIC_APP_URL = "https://chousei.pages.dev"
+NEXT_PUBLIC_APP_URL = "https://chousei.workers.dev"
