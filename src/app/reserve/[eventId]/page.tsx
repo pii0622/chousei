@@ -42,6 +42,7 @@ export default function ReservePage() {
   const [completed, setCompleted] = useState(false);
   const [error, setError] = useState("");
   const [reservedSlot, setReservedSlot] = useState<TimeSlot | null>(null);
+  const [reservationId, setReservationId] = useState<string | null>(null);
 
   // Keep additionalNames array length in sync with partySize
   useEffect(() => {
@@ -99,6 +100,8 @@ export default function ReservePage() {
         return;
       }
 
+      const data = (await res.json()) as { id: string };
+      setReservationId(data.id);
       const slot = event?.timeSlots.find((s) => s.id === selectedSlot) || null;
       setReservedSlot(slot);
       setCompleted(true);
@@ -203,9 +206,17 @@ export default function ReservePage() {
             </p>
           </div>
           <p className="text-sm text-gray-500 mb-6">
-            確認メールをお送りしました（SMTP設定済みの場合）
+            確認メールをお送りしました
           </p>
           <div className="flex flex-col gap-3">
+            {reservationId && (
+              <a
+                href={`/reserve/cancel/${reservationId}`}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-800 px-6 py-3 text-white font-medium hover:bg-gray-900 transition"
+              >
+                予約の詳細・キャンセルはこちら
+              </a>
+            )}
             <a
               href={googleCalendarUrl()}
               target="_blank"
