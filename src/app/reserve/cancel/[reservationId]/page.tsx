@@ -12,6 +12,7 @@ interface Reservation {
     startTime: string;
     endTime: string;
     event: {
+      id: string;
       title: string;
       date: string;
       location: string;
@@ -193,6 +194,20 @@ export default function CancelPage() {
         >
           {cancelling ? "キャンセル中..." : "予約をキャンセルする"}
         </button>
+
+        <div className="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
+          <p className="font-semibold mb-1">時間を変更したい場合</p>
+          <p>
+            お手数ですが、
+            <a
+              href={`/reserve/${event.id}`}
+              className="underline font-medium"
+            >
+              新しい時間で予約
+            </a>
+            を取得後、こちらから現在の予約をキャンセルしてください。
+          </p>
+        </div>
       </div>
     </div>
   );
