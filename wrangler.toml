@@ -16,6 +16,9 @@ database_name = "chousei-db"
 database_id = "876d56d7-77d5-483f-90e2-93d8f2d41130"
 migrations_dir = "drizzle"
 
-# Note: Environment variables and secrets are managed via the Cloudflare dashboard
-# (Settings -> Variables and Secrets). Do not add [vars] here, as it would
-# overwrite dashboard values on every deploy.
+# Secrets (ADMIN_PASSWORD, RESEND_API_KEY) are managed via the dashboard.
+# They persist across deploys because they're encrypted Secrets.
+# Non-secret public values go here:
+[vars]
+NEXT_PUBLIC_APP_URL = "https://chousei.quiet-frog-fb2e.workers.dev"
+MAIL_FROM = "onboarding@resend.dev"
