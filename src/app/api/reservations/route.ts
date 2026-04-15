@@ -4,7 +4,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getDb } from "@/db";
 import { timeSlots, reservations } from "@/db/schema";
 import { sendMail } from "@/lib/mail";
-import { generateGoogleCalendarUrl, generateICS } from "@/lib/calendar";
+import { generateGoogleCalendarUrl } from "@/lib/calendar";
 
 // POST create reservation
 export async function POST(request: Request) {
@@ -120,22 +120,12 @@ export async function POST(request: Request) {
     endTime: slot.endTime,
   });
 
-  const icsContent = generateICS({
-    title: event.title,
-    description: event.description,
-    location: event.location,
-    date: event.date,
-    startTime: slot.startTime,
-    endTime: slot.endTime,
-  });
-
-  const icsBase64 = btoa(icsContent);
-
   const { env, ctx } = await getCloudflareContext({ async: true });
   const envMap = env as Record<string, string | undefined>;
   const appUrl = envMap.NEXT_PUBLIC_APP_URL || "";
   const adminEmail = envMap.ADMIN_EMAIL;
   const cancelUrl = `${appUrl}/reserve/cancel/${reservationId}`;
+  const icsUrl = `${appUrl}/api/reservations/${reservationId}/ics`;
   const adminEventUrl = `${appUrl}/admin/events/${event.id}`;
 
   // Participant names list (main + additionals)
@@ -175,7 +165,7 @@ export async function POST(request: Request) {
           </a>
         </div>
         <div style="margin-top: 10px;">
-          <a href="data:text/calendar;base64,${icsBase64}" download="event.ics"
+          <a href="${icsUrl}" target="_blank"
              style="display: inline-block; padding: 10px 20px; background: #34a853; color: white; text-decoration: none; border-radius: 4px;">
             カレンダーファイル(.ics)をダウンロード
           </a>
