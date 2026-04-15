@@ -41,6 +41,11 @@ export default function EventDetailPage() {
   const [sendingReminder, setSendingReminder] = useState(false);
   const [reminderResult, setReminderResult] = useState("");
   const [copiedEmails, setCopiedEmails] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editLocation, setEditLocation] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const appUrl =
@@ -107,6 +112,50 @@ export default function EventDetailPage() {
     window.open(`/api/admin/events/${eventId}/export?format=csv`, "_blank");
   };
 
+  const startEdit = () => {
+    if (!event) return;
+    setEditTitle(event.title);
+    setEditDescription(event.description);
+    setEditLocation(event.location);
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+  };
+
+  const saveEdit = async () => {
+    if (!editTitle.trim()) {
+      alert("タイトルを入力してください");
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editTitle,
+          description: editDescription,
+          location: editLocation,
+        }),
+      });
+      if (!res.ok) {
+        alert("保存に失敗しました");
+        return;
+      }
+      const refreshed = await fetch(`/api/events/${eventId}`).then(
+        (r) => r.json() as Promise<Event & { error?: string }>
+      );
+      if (!refreshed.error) setEvent(refreshed);
+      setEditing(false);
+    } catch {
+      alert("保存に失敗しました");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const handleDeleteReservation = async (reservationId: string, name: string) => {
     if (!confirm(`${name} さんの予約を削除しますか？`)) return;
     const res = await fetch(`/api/reservations/${reservationId}`, {
@@ -144,29 +193,94 @@ export default function EventDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{event.title}</h1>
-          <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
-            <span>{event.date}</span>
-            {event.location && <span>{event.location}</span>}
+      {editing ? (
+        <div className="rounded-xl bg-white p-6 shadow space-y-4">
+          <h2 className="text-lg font-semibold">イベント情報を編集</h2>
+          <p className="text-xs text-gray-500">
+            ※ 日付と時間帯は変更できません（既存の予約に影響するため）
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              タイトル <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
           </div>
-          {event.description && (
-            <p className="mt-2 text-gray-600 whitespace-pre-wrap">
-              {event.description}
-            </p>
-          )}
-        </div>
-        <div className="text-right">
-          <div className="text-3xl font-bold text-blue-600">
-            {totalReserved}
-            <span className="text-lg font-normal text-gray-400">
-              /{totalCapacity}
-            </span>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              説明
+            </label>
+            <textarea
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
           </div>
-          <div className="text-sm text-gray-400">総予約人数</div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              場所
+            </label>
+            <input
+              type="text"
+              value={editLocation}
+              onChange={(e) => setEditLocation(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={saveEdit}
+              disabled={savingEdit}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white font-medium hover:bg-blue-700 disabled:opacity-50 transition"
+            >
+              {savingEdit ? "保存中..." : "保存"}
+            </button>
+            <button
+              onClick={cancelEdit}
+              className="rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-700 font-medium hover:bg-gray-200 transition"
+            >
+              キャンセル
+            </button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">{event.title}</h1>
+              <button
+                onClick={startEdit}
+                className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+              >
+                編集
+              </button>
+            </div>
+            <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
+              <span>{event.date}</span>
+              {event.location && <span>{event.location}</span>}
+            </div>
+            {event.description && (
+              <p className="mt-2 text-gray-600 whitespace-pre-wrap">
+                {event.description}
+              </p>
+            )}
+          </div>
+          <div className="text-right">
+            <div className="text-3xl font-bold text-blue-600">
+              {totalReserved}
+              <span className="text-lg font-normal text-gray-400">
+                /{totalCapacity}
+              </span>
+            </div>
+            <div className="text-sm text-gray-400">総予約人数</div>
+          </div>
+        </div>
+      )}
 
       {/* QR Code + Reservation URL */}
       <div className="rounded-xl bg-white p-6 shadow">
