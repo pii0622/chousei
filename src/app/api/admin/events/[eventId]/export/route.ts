@@ -1,25 +1,25 @@
 import { NextResponse } from "next/server";
-import { getPrisma } from "@/lib/prisma";
+import { eq, asc } from "drizzle-orm";
+import { getDb } from "@/db";
+import { events, timeSlots, reservations } from "@/db/schema";
 
 // GET export reservations as CSV
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
-  const prisma = await getPrisma();
+  const db = await getDb();
   const { eventId } = await params;
   const url = new URL(request.url);
   const format = url.searchParams.get("format") || "csv";
 
-  const event = await prisma.event.findUnique({
-    where: { id: eventId },
-    include: {
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+    with: {
       timeSlots: {
-        orderBy: { sortOrder: "asc" },
-        include: {
-          reservations: {
-            orderBy: { createdAt: "asc" },
-          },
+        orderBy: asc(timeSlots.sortOrder),
+        with: {
+          reservations: { orderBy: asc(reservations.createdAt) },
         },
       },
     },

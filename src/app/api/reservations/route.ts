@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import { getPrisma } from "@/lib/prisma";
+import { eq, and } from "drizzle-orm";
+import { getDb } from "@/db";
+import { timeSlots, reservations } from "@/db/schema";
 import { sendMail } from "@/lib/mail";
 import { generateGoogleCalendarUrl, generateICS } from "@/lib/calendar";
 
 // POST create reservation
 export async function POST(request: Request) {
-  const prisma = await getPrisma();
+  const db = await getDb();
   const body = (await request.json()) as {
     timeSlotId?: string;
     name?: string;
@@ -28,13 +30,10 @@ export async function POST(request: Request) {
     );
   }
 
-  // Get timeslot with current reservations
-  const timeSlot = await prisma.timeSlot.findUnique({
-    where: { id: timeSlotId },
-    include: {
-      reservations: true,
-      event: true,
-    },
+  // Get timeslot with current reservations and event
+  const timeSlot = await db.query.timeSlots.findFirst({
+    where: eq(timeSlots.id, timeSlotId),
+    with: { reservations: true, event: true },
   });
 
   if (!timeSlot) {
@@ -59,10 +58,11 @@ export async function POST(request: Request) {
   }
 
   // Check duplicate
-  const existing = await prisma.reservation.findUnique({
-    where: {
-      timeSlotId_email: { timeSlotId, email },
-    },
+  const existing = await db.query.reservations.findFirst({
+    where: and(
+      eq(reservations.timeSlotId, timeSlotId),
+      eq(reservations.email, email)
+    ),
   });
 
   if (existing) {
@@ -72,18 +72,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const reservation = await prisma.reservation.create({
-    data: { timeSlotId, name, email, partySize },
-    include: {
-      timeSlot: {
-        include: { event: true },
-      },
-    },
+  const reservationId = crypto.randomUUID();
+  await db.insert(reservations).values({
+    id: reservationId,
+    timeSlotId,
+    name,
+    email,
+    partySize,
   });
 
   // Send confirmation email (async, don't block response)
-  const event = reservation.timeSlot.event;
-  const slot = reservation.timeSlot;
+  const event = timeSlot.event;
+  const slot = timeSlot;
 
   const googleCalUrl = generateGoogleCalendarUrl({
     title: event.title,
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
     endTime: slot.endTime,
   });
 
-  const icsBase64 = Buffer.from(icsContent).toString("base64");
+  const icsBase64 = btoa(icsContent);
 
   sendMail({
     to: email,
@@ -138,5 +138,5 @@ export async function POST(request: Request) {
     `,
   }).catch((err) => console.error("[Mail] Failed to send confirmation:", err));
 
-  return NextResponse.json(reservation, { status: 201 });
+  return NextResponse.json({ id: reservationId }, { status: 201 });
 }

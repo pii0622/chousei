@@ -1,26 +1,27 @@
 import { NextResponse } from "next/server";
-import { getPrisma } from "@/lib/prisma";
+import { desc, asc } from "drizzle-orm";
+import { getDb } from "@/db";
+import { events, timeSlots } from "@/db/schema";
 
-// GET all events
+// GET all events with timeSlots and reservations
 export async function GET() {
-  const prisma = await getPrisma();
-  const events = await prisma.event.findMany({
-    include: {
+  const db = await getDb();
+  const allEvents = await db.query.events.findMany({
+    with: {
       timeSlots: {
-        orderBy: { sortOrder: "asc" },
-        include: {
-          reservations: true,
-        },
+        orderBy: asc(timeSlots.sortOrder),
+        with: { reservations: true },
       },
     },
-    orderBy: { date: "desc" },
+    orderBy: desc(events.date),
   });
-  return NextResponse.json(events);
+
+  return NextResponse.json(allEvents);
 }
 
 // POST create event
 export async function POST(request: Request) {
-  const prisma = await getPrisma();
+  const db = await getDb();
   const body = (await request.json()) as {
     title: string;
     description?: string;
@@ -28,34 +29,28 @@ export async function POST(request: Request) {
     location?: string;
     timeSlots?: { startTime: string; endTime: string; capacity: number }[];
   };
-  const { title, description, date, location, timeSlots } = body;
 
-  const event = await prisma.event.create({
-    data: {
-      title,
-      description: description || "",
-      date,
-      location: location || "",
-      timeSlots: {
-        create: (timeSlots || []).map(
-          (
-            slot: { startTime: string; endTime: string; capacity: number },
-            index: number
-          ) => ({
-            startTime: slot.startTime,
-            endTime: slot.endTime,
-            capacity: slot.capacity,
-            sortOrder: index,
-          })
-        ),
-      },
-    },
-    include: {
-      timeSlots: {
-        orderBy: { sortOrder: "asc" },
-      },
-    },
+  const eventId = crypto.randomUUID();
+  await db.insert(events).values({
+    id: eventId,
+    title: body.title,
+    description: body.description || "",
+    date: body.date,
+    location: body.location || "",
   });
 
-  return NextResponse.json(event, { status: 201 });
+  if (body.timeSlots && body.timeSlots.length > 0) {
+    await db.insert(timeSlots).values(
+      body.timeSlots.map((slot, index) => ({
+        id: crypto.randomUUID(),
+        eventId,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        capacity: slot.capacity,
+        sortOrder: index,
+      }))
+    );
+  }
+
+  return NextResponse.json({ id: eventId }, { status: 201 });
 }
