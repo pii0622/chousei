@@ -75,6 +75,41 @@ export async function PUT(
   return NextResponse.json({ ok: true });
 }
 
+// PATCH update event metadata only (title, description, location)
+// Intentionally does NOT allow changing date or timeSlots to avoid
+// breaking existing reservations.
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ eventId: string }> }
+) {
+  const db = await getDb();
+  const { eventId } = await params;
+  const body = (await request.json()) as {
+    title?: string;
+    description?: string;
+    location?: string;
+  };
+
+  const updates: Record<string, string> = {
+    updatedAt: new Date().toISOString(),
+  };
+  if (typeof body.title === "string") {
+    if (!body.title.trim()) {
+      return NextResponse.json(
+        { error: "タイトルは空にできません" },
+        { status: 400 }
+      );
+    }
+    updates.title = body.title;
+  }
+  if (typeof body.description === "string") updates.description = body.description;
+  if (typeof body.location === "string") updates.location = body.location;
+
+  await db.update(events).set(updates).where(eq(events.id, eventId));
+
+  return NextResponse.json({ ok: true });
+}
+
 // DELETE event
 export async function DELETE(
   _request: Request,
