@@ -37,10 +37,23 @@ export default function ReservePage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [partySize, setPartySize] = useState(1);
+  const [additionalNames, setAdditionalNames] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [error, setError] = useState("");
   const [reservedSlot, setReservedSlot] = useState<TimeSlot | null>(null);
+
+  // Keep additionalNames array length in sync with partySize
+  useEffect(() => {
+    setAdditionalNames((prev) => {
+      const needed = Math.max(0, partySize - 1);
+      if (prev.length === needed) return prev;
+      if (prev.length < needed) {
+        return [...prev, ...Array(needed - prev.length).fill("")];
+      }
+      return prev.slice(0, needed);
+    });
+  }, [partySize]);
 
   useEffect(() => {
     fetch(`/api/events/${eventId}`)
@@ -76,6 +89,7 @@ export default function ReservePage() {
           name,
           email,
           partySize,
+          additionalNames,
         }),
       });
 
@@ -400,6 +414,32 @@ export default function ReservePage() {
                 ))}
               </select>
             </div>
+
+            {partySize > 1 && (
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  同伴者のお名前 <span className="text-red-500">*</span>
+                </label>
+                <p className="text-xs text-gray-500 -mt-1">
+                  代表者以外の方のお名前をご記入ください
+                </p>
+                {additionalNames.map((n, i) => (
+                  <input
+                    key={i}
+                    type="text"
+                    required
+                    value={n}
+                    onChange={(e) => {
+                      const next = [...additionalNames];
+                      next[i] = e.target.value;
+                      setAdditionalNames(next);
+                    }}
+                    placeholder={`同伴者 ${i + 1} のお名前`}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                ))}
+              </div>
+            )}
 
             {error && (
               <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">

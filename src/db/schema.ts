@@ -36,6 +36,7 @@ export const reservations = sqliteTable(
     name: text("name").notNull(),
     email: text("email").notNull(),
     partySize: integer("partySize").notNull().default(1),
+    additionalNames: text("additionalNames"), // JSON-encoded array of names
     createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
   (t) => [

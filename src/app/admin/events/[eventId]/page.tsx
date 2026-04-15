@@ -9,6 +9,7 @@ interface Reservation {
   name: string;
   email: string;
   partySize: number;
+  additionalNames: string | null;
   createdAt: string;
 }
 
@@ -280,26 +281,40 @@ export default function EventDetailPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {slot.reservations.map((r) => (
-                        <tr key={r.id} className="border-b last:border-0">
-                          <td className="py-2 pr-4">{r.name}</td>
-                          <td className="py-2 pr-4 text-gray-500">
-                            {r.email}
-                          </td>
-                          <td className="py-2 pr-4">{r.partySize}名</td>
-                          <td className="py-2 pr-4 text-gray-400">
-                            {new Date(r.createdAt).toLocaleString("ja-JP")}
-                          </td>
-                          <td className="py-2 text-right">
-                            <button
-                              onClick={() => handleDeleteReservation(r.id, r.name)}
-                              className="text-xs text-red-500 hover:text-red-700 hover:underline"
-                            >
-                              削除
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {slot.reservations.map((r) => {
+                        const extras: string[] = r.additionalNames
+                          ? (JSON.parse(r.additionalNames) as string[])
+                          : [];
+                        return (
+                          <tr key={r.id} className="border-b last:border-0 align-top">
+                            <td className="py-2 pr-4">
+                              <div>{r.name}</div>
+                              {extras.length > 0 && (
+                                <div className="mt-1 text-xs text-gray-500">
+                                  {extras.map((n, i) => (
+                                    <div key={i}>+ {n}</div>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-2 pr-4 text-gray-500">
+                              {r.email}
+                            </td>
+                            <td className="py-2 pr-4">{r.partySize}名</td>
+                            <td className="py-2 pr-4 text-gray-400">
+                              {new Date(r.createdAt).toLocaleString("ja-JP")}
+                            </td>
+                            <td className="py-2 text-right">
+                              <button
+                                onClick={() => handleDeleteReservation(r.id, r.name)}
+                                className="text-xs text-red-500 hover:text-red-700 hover:underline"
+                              >
+                                削除
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

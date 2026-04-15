@@ -14,8 +14,15 @@ export async function POST(request: Request) {
     name?: string;
     email?: string;
     partySize?: number;
+    additionalNames?: string[];
   };
-  const { timeSlotId, name, email, partySize = 1 } = body;
+  const {
+    timeSlotId,
+    name,
+    email,
+    partySize = 1,
+    additionalNames = [],
+  } = body;
 
   if (!timeSlotId || !name || !email) {
     return NextResponse.json(
@@ -29,6 +36,22 @@ export async function POST(request: Request) {
       { error: "partySize must be at least 1" },
       { status: 400 }
     );
+  }
+
+  // Validate additional names count matches partySize - 1
+  if (partySize > 1) {
+    if (additionalNames.length !== partySize - 1) {
+      return NextResponse.json(
+        { error: "追加の人数分の名前を全て入力してください" },
+        { status: 400 }
+      );
+    }
+    if (additionalNames.some((n) => !n || !n.trim())) {
+      return NextResponse.json(
+        { error: "同伴者の名前を入力してください" },
+        { status: 400 }
+      );
+    }
   }
 
   // Get timeslot with current reservations and event
@@ -80,6 +103,8 @@ export async function POST(request: Request) {
     name,
     email,
     partySize,
+    additionalNames:
+      additionalNames.length > 0 ? JSON.stringify(additionalNames) : null,
   });
 
   // Send confirmation email (async, don't block response)
@@ -113,6 +138,14 @@ export async function POST(request: Request) {
   const cancelUrl = `${appUrl}/reserve/cancel/${reservationId}`;
   const adminEventUrl = `${appUrl}/admin/events/${event.id}`;
 
+  // Participant names list (main + additionals)
+  const participantsHtml = [name, ...additionalNames]
+    .map(
+      (n, i) =>
+        `<div style="padding: 4px 0;">${i + 1}. ${n}</div>`
+    )
+    .join("");
+
   // Send confirmation email to guest (use waitUntil so the Worker doesn't
   // terminate before the email is sent)
   ctx.waitUntil(
@@ -123,12 +156,17 @@ export async function POST(request: Request) {
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>予約が確定しました</h2>
         <table style="border-collapse: collapse; width: 100%;">
-          <tr><td style="padding: 8px; font-weight: bold;">イベント</td><td style="padding: 8px;">${event.title}</td></tr>
-          <tr><td style="padding: 8px; font-weight: bold;">日付</td><td style="padding: 8px;">${event.date}</td></tr>
-          <tr><td style="padding: 8px; font-weight: bold;">時間</td><td style="padding: 8px;">${slot.startTime} - ${slot.endTime}</td></tr>
-          <tr><td style="padding: 8px; font-weight: bold;">お名前</td><td style="padding: 8px;">${name}</td></tr>
-          <tr><td style="padding: 8px; font-weight: bold;">人数</td><td style="padding: 8px;">${partySize}名</td></tr>
-          ${event.location ? `<tr><td style="padding: 8px; font-weight: bold;">場所</td><td style="padding: 8px;">${event.location}</td></tr>` : ""}
+          <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">イベント</td><td style="padding: 8px;">${event.title}</td></tr>
+          <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">日付</td><td style="padding: 8px;">${event.date}</td></tr>
+          <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">時間</td><td style="padding: 8px;">${slot.startTime} - ${slot.endTime}</td></tr>
+          <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">代表者</td><td style="padding: 8px;">${name}</td></tr>
+          <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">人数</td><td style="padding: 8px;">${partySize}名</td></tr>
+          ${
+            additionalNames.length > 0
+              ? `<tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">参加者</td><td style="padding: 8px;">${participantsHtml}</td></tr>`
+              : ""
+          }
+          ${event.location ? `<tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">場所</td><td style="padding: 8px;">${event.location}</td></tr>` : ""}
         </table>
         <div style="margin-top: 20px;">
           <a href="${googleCalUrl}" target="_blank"
@@ -146,10 +184,24 @@ export async function POST(request: Request) {
           ご来場をお待ちしております。
         </p>
         <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;" />
-        <p style="color: #999; font-size: 12px;">
-          ご都合が悪くなった場合は、以下のリンクから予約をキャンセルできます：<br />
-          <a href="${cancelUrl}" style="color: #666;">${cancelUrl}</a>
+        <p style="color: #666; font-size: 14px; margin-bottom: 12px;">
+          ご都合が悪くなった場合は、以下のボタンから予約をキャンセルできます。
         </p>
+        <div>
+          <a href="${cancelUrl}" target="_blank"
+             style="display: inline-block; padding: 10px 20px; background: #ef4444; color: white; text-decoration: none; border-radius: 4px;">
+            予約をキャンセルする
+          </a>
+        </div>
+        ${
+          partySize > 1
+            ? `<p style="color: #666; font-size: 13px; margin-top: 16px;">
+                ※ 人数の一部変更（例: ${partySize}名 → 2名）をご希望の場合は、恐れ入りますが
+                <a href="mailto:${adminEmail || ""}" style="color: #3b82f6;">${adminEmail || "管理者"}</a>
+                までご連絡ください。
+              </p>`
+            : ""
+        }
       </div>
     `,
     }).catch((err) => console.error("[Mail] Failed to send confirmation:", err))
@@ -169,9 +221,14 @@ export async function POST(request: Request) {
               <tr><td style="padding: 8px; font-weight: bold;">イベント</td><td style="padding: 8px;">${event.title}</td></tr>
               <tr><td style="padding: 8px; font-weight: bold;">日付</td><td style="padding: 8px;">${event.date}</td></tr>
               <tr><td style="padding: 8px; font-weight: bold;">時間</td><td style="padding: 8px;">${slot.startTime} - ${slot.endTime}</td></tr>
-              <tr><td style="padding: 8px; font-weight: bold;">お名前</td><td style="padding: 8px;">${name}</td></tr>
-              <tr><td style="padding: 8px; font-weight: bold;">メール</td><td style="padding: 8px;">${email}</td></tr>
-              <tr><td style="padding: 8px; font-weight: bold;">人数</td><td style="padding: 8px;">${partySize}名</td></tr>
+              <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">代表者</td><td style="padding: 8px;">${name}</td></tr>
+              <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">メール</td><td style="padding: 8px;">${email}</td></tr>
+              <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">人数</td><td style="padding: 8px;">${partySize}名</td></tr>
+              ${
+                additionalNames.length > 0
+                  ? `<tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">参加者</td><td style="padding: 8px;">${participantsHtml}</td></tr>`
+                  : ""
+              }
               <tr><td style="padding: 8px; font-weight: bold;">現在の予約状況</td><td style="padding: 8px;">${newTotal}/${slot.capacity}名</td></tr>
             </table>
             <div style="margin-top: 20px;">
