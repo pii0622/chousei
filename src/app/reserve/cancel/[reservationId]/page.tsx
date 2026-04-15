@@ -201,6 +201,8 @@ export default function CancelPage() {
             お手数ですが、
             <a
               href={`/reserve/${event.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="underline font-medium"
             >
               新しい時間で予約
