@@ -106,18 +106,20 @@ export async function POST(request: Request) {
 
   const icsBase64 = btoa(icsContent);
 
-  const { env } = await getCloudflareContext({ async: true });
+  const { env, ctx } = await getCloudflareContext({ async: true });
   const envMap = env as Record<string, string | undefined>;
   const appUrl = envMap.NEXT_PUBLIC_APP_URL || "";
   const adminEmail = envMap.ADMIN_EMAIL;
   const cancelUrl = `${appUrl}/reserve/cancel/${reservationId}`;
   const adminEventUrl = `${appUrl}/admin/events/${event.id}`;
 
-  // Send confirmation email to guest
-  sendMail({
-    to: email,
-    subject: `【予約確認】${event.title}`,
-    html: `
+  // Send confirmation email to guest (use waitUntil so the Worker doesn't
+  // terminate before the email is sent)
+  ctx.waitUntil(
+    sendMail({
+      to: email,
+      subject: `【予約確認】${event.title}`,
+      html: `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>予約が確定しました</h2>
         <table style="border-collapse: collapse; width: 100%;">
@@ -150,35 +152,38 @@ export async function POST(request: Request) {
         </p>
       </div>
     `,
-  }).catch((err) => console.error("[Mail] Failed to send confirmation:", err));
+    }).catch((err) => console.error("[Mail] Failed to send confirmation:", err))
+  );
 
   // Send notification email to admin
   if (adminEmail) {
     const newTotal = currentTotal + partySize;
-    sendMail({
-      to: adminEmail,
-      subject: `【新規予約】${event.title} - ${name}様`,
-      html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>新しい予約が入りました</h2>
-          <table style="border-collapse: collapse; width: 100%;">
-            <tr><td style="padding: 8px; font-weight: bold;">イベント</td><td style="padding: 8px;">${event.title}</td></tr>
-            <tr><td style="padding: 8px; font-weight: bold;">日付</td><td style="padding: 8px;">${event.date}</td></tr>
-            <tr><td style="padding: 8px; font-weight: bold;">時間</td><td style="padding: 8px;">${slot.startTime} - ${slot.endTime}</td></tr>
-            <tr><td style="padding: 8px; font-weight: bold;">お名前</td><td style="padding: 8px;">${name}</td></tr>
-            <tr><td style="padding: 8px; font-weight: bold;">メール</td><td style="padding: 8px;">${email}</td></tr>
-            <tr><td style="padding: 8px; font-weight: bold;">人数</td><td style="padding: 8px;">${partySize}名</td></tr>
-            <tr><td style="padding: 8px; font-weight: bold;">現在の予約状況</td><td style="padding: 8px;">${newTotal}/${slot.capacity}名</td></tr>
-          </table>
-          <div style="margin-top: 20px;">
-            <a href="${adminEventUrl}" target="_blank"
-               style="display: inline-block; padding: 10px 20px; background: #3b82f6; color: white; text-decoration: none; border-radius: 4px;">
-              管理画面で確認
-            </a>
+    ctx.waitUntil(
+      sendMail({
+        to: adminEmail,
+        subject: `【新規予約】${event.title} - ${name}様`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>新しい予約が入りました</h2>
+            <table style="border-collapse: collapse; width: 100%;">
+              <tr><td style="padding: 8px; font-weight: bold;">イベント</td><td style="padding: 8px;">${event.title}</td></tr>
+              <tr><td style="padding: 8px; font-weight: bold;">日付</td><td style="padding: 8px;">${event.date}</td></tr>
+              <tr><td style="padding: 8px; font-weight: bold;">時間</td><td style="padding: 8px;">${slot.startTime} - ${slot.endTime}</td></tr>
+              <tr><td style="padding: 8px; font-weight: bold;">お名前</td><td style="padding: 8px;">${name}</td></tr>
+              <tr><td style="padding: 8px; font-weight: bold;">メール</td><td style="padding: 8px;">${email}</td></tr>
+              <tr><td style="padding: 8px; font-weight: bold;">人数</td><td style="padding: 8px;">${partySize}名</td></tr>
+              <tr><td style="padding: 8px; font-weight: bold;">現在の予約状況</td><td style="padding: 8px;">${newTotal}/${slot.capacity}名</td></tr>
+            </table>
+            <div style="margin-top: 20px;">
+              <a href="${adminEventUrl}" target="_blank"
+                 style="display: inline-block; padding: 10px 20px; background: #3b82f6; color: white; text-decoration: none; border-radius: 4px;">
+                管理画面で確認
+              </a>
+            </div>
           </div>
-        </div>
-      `,
-    }).catch((err) => console.error("[Mail] Failed to send admin notification:", err));
+        `,
+      }).catch((err) => console.error("[Mail] Failed to send admin notification:", err))
+    );
   }
 
   return NextResponse.json({ id: reservationId }, { status: 201 });
