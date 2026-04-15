@@ -4,7 +4,6 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getDb } from "@/db";
 import { timeSlots, reservations } from "@/db/schema";
 import { sendMail } from "@/lib/mail";
-import { generateGoogleCalendarUrl } from "@/lib/calendar";
 
 // POST create reservation
 export async function POST(request: Request) {
@@ -110,21 +109,11 @@ export async function POST(request: Request) {
   const event = timeSlot.event;
   const slot = timeSlot;
 
-  const googleCalUrl = generateGoogleCalendarUrl({
-    title: event.title,
-    description: event.description,
-    location: event.location,
-    date: event.date,
-    startTime: slot.startTime,
-    endTime: slot.endTime,
-  });
-
   const { env, ctx } = await getCloudflareContext({ async: true });
   const envMap = env as Record<string, string | undefined>;
   const appUrl = envMap.NEXT_PUBLIC_APP_URL || "";
   const adminEmail = envMap.ADMIN_EMAIL;
   const cancelUrl = `${appUrl}/reserve/cancel/${reservationId}`;
-  const icsUrl = `${appUrl}/api/reservations/${reservationId}/ics`;
   const adminEventUrl = `${appUrl}/admin/events/${event.id}`;
 
   const allNames = [name, ...additionalNames];
@@ -133,6 +122,8 @@ export async function POST(request: Request) {
     .join("\n");
 
   // Guest confirmation email - simple HTML + plain text
+  // (Calendar links are available on the cancellation/confirmation page
+  //  to keep the email body minimal and avoid spam filters like Yahoo's.)
   const guestText = `${name} 様
 
 ${event.title} のご予約を承りました。
@@ -144,11 +135,7 @@ ${event.location ? `場所: ${event.location}\n` : ""}人数: ${partySize}名${
     additionalNames.length > 0 ? `\n参加者:\n${participantsText}` : ""
   }
 
-■ カレンダーに追加
-Googleカレンダー: ${googleCalUrl}
-ICSファイル: ${icsUrl}
-
-■ ご予約のキャンセル
+■ ご予約のキャンセル / カレンダー追加
 ${cancelUrl}
 ${
   partySize > 1
@@ -169,10 +156,7 @@ ${event.location ? `場所: ${event.location}<br>` : ""}人数: ${partySize}名$
       ? `<br>参加者:<br>${allNames.map((n, i) => `&nbsp;&nbsp;${i + 1}. ${n}`).join("<br>")}`
       : ""
   }</p>
-<p><strong>■ カレンダーに追加</strong><br>
-Googleカレンダー: <a href="${googleCalUrl}">${googleCalUrl}</a><br>
-ICSファイル: <a href="${icsUrl}">${icsUrl}</a></p>
-<p><strong>■ ご予約のキャンセル</strong><br>
+<p><strong>■ ご予約のキャンセル / カレンダー追加</strong><br>
 <a href="${cancelUrl}">${cancelUrl}</a></p>
 ${
   partySize > 1
