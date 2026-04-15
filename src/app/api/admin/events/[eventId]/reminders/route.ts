@@ -49,54 +49,58 @@ export async function POST(
       const additionalNames: string[] = r.additionalNames
         ? (JSON.parse(r.additionalNames) as string[])
         : [];
-      const participantsHtml = [r.name, ...additionalNames]
-        .map(
-          (n, i) =>
-            `<div style="padding: 4px 0;">${i + 1}. ${n}</div>`
-        )
-        .join("");
+      const allNames = [r.name, ...additionalNames];
+      const participantsText = allNames
+        .map((n, i) => `  ${i + 1}. ${n}`)
+        .join("\n");
+
+      const text = `${r.name} 様
+
+${event.title} のリマインダーです。
+
+■ 予約内容
+日付: ${event.date}
+時間: ${r.startTime} - ${r.endTime}
+${event.location ? `場所: ${event.location}\n` : ""}人数: ${r.partySize}名${
+        additionalNames.length > 0 ? `\n参加者:\n${participantsText}` : ""
+      }
+
+■ ご予約のキャンセル
+${cancelUrl}
+${
+  r.partySize > 1
+    ? `\n※ 人数の一部変更をご希望の場合は、${adminEmail || "管理者"} までご連絡ください。`
+    : ""
+}
+
+ご来場をお待ちしております。`;
+
+      const html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#333;line-height:1.6;">
+<p>${r.name} 様</p>
+<p>${event.title} のリマインダーです。</p>
+<p><strong>■ 予約内容</strong><br>
+日付: ${event.date}<br>
+時間: ${r.startTime} - ${r.endTime}<br>
+${event.location ? `場所: ${event.location}<br>` : ""}人数: ${r.partySize}名${
+        additionalNames.length > 0
+          ? `<br>参加者:<br>${allNames.map((n, i) => `&nbsp;&nbsp;${i + 1}. ${n}`).join("<br>")}`
+          : ""
+      }</p>
+<p><strong>■ ご予約のキャンセル</strong><br>
+<a href="${cancelUrl}">${cancelUrl}</a></p>
+${
+  r.partySize > 1
+    ? `<p style="color:#666;font-size:13px;">※ 人数の一部変更をご希望の場合は、<a href="mailto:${adminEmail || ""}">${adminEmail || "管理者"}</a> までご連絡ください。</p>`
+    : ""
+}
+<p>ご来場をお待ちしております。</p>
+</div>`;
 
       await sendMail({
         to: r.email,
         subject: `【リマインダー】${event.title}`,
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>${event.title} のリマインダー</h2>
-            <p>${r.name} 様</p>
-            <p>ご予約のリマインダーをお送りいたします。</p>
-            <table style="border-collapse: collapse; width: 100%;">
-              <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">日付</td><td style="padding: 8px;">${event.date}</td></tr>
-              <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">時間</td><td style="padding: 8px;">${r.startTime} - ${r.endTime}</td></tr>
-              <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">人数</td><td style="padding: 8px;">${r.partySize}名</td></tr>
-              ${
-                additionalNames.length > 0
-                  ? `<tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">参加者</td><td style="padding: 8px;">${participantsHtml}</td></tr>`
-                  : ""
-              }
-              ${event.location ? `<tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">場所</td><td style="padding: 8px;">${event.location}</td></tr>` : ""}
-            </table>
-            <p style="margin-top: 20px; color: #666;">ご来場をお待ちしております。</p>
-            <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;" />
-            <p style="color: #666; font-size: 14px; margin-bottom: 12px;">
-              ご都合が悪くなった場合は、以下のボタンから予約をキャンセルできます。
-            </p>
-            <div>
-              <a href="${cancelUrl}" target="_blank"
-                 style="display: inline-block; padding: 10px 20px; background: #ef4444; color: white; text-decoration: none; border-radius: 4px;">
-                予約をキャンセルする
-              </a>
-            </div>
-            ${
-              r.partySize > 1
-                ? `<p style="color: #666; font-size: 13px; margin-top: 16px;">
-                    ※ 人数の一部変更をご希望の場合は、恐れ入りますが
-                    <a href="mailto:${adminEmail || ""}" style="color: #3b82f6;">${adminEmail || "管理者"}</a>
-                    までご連絡ください。
-                  </p>`
-                : ""
-            }
-          </div>
-        `,
+        html,
+        text,
       });
       sent++;
     } catch {

@@ -5,9 +5,10 @@ interface SendMailOptions {
   to: string;
   subject: string;
   html: string;
+  text?: string;
 }
 
-export async function sendMail({ to, subject, html }: SendMailOptions) {
+export async function sendMail({ to, subject, html, text }: SendMailOptions) {
   const { env } = await getCloudflareContext({ async: true });
   const apiKey = (env as Record<string, string | undefined>).RESEND_API_KEY;
   const from =
@@ -26,6 +27,7 @@ export async function sendMail({ to, subject, html }: SendMailOptions) {
     to,
     subject,
     html,
+    text,
   });
 
   if (error) {

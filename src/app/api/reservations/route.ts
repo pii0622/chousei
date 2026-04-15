@@ -107,7 +107,6 @@ export async function POST(request: Request) {
       additionalNames.length > 0 ? JSON.stringify(additionalNames) : null,
   });
 
-  // Send confirmation email (async, don't block response)
   const event = timeSlot.event;
   const slot = timeSlot;
 
@@ -128,108 +127,112 @@ export async function POST(request: Request) {
   const icsUrl = `${appUrl}/api/reservations/${reservationId}/ics`;
   const adminEventUrl = `${appUrl}/admin/events/${event.id}`;
 
-  // Participant names list (main + additionals)
-  const participantsHtml = [name, ...additionalNames]
-    .map(
-      (n, i) =>
-        `<div style="padding: 4px 0;">${i + 1}. ${n}</div>`
-    )
-    .join("");
+  const allNames = [name, ...additionalNames];
+  const participantsText = allNames
+    .map((n, i) => `  ${i + 1}. ${n}`)
+    .join("\n");
 
-  // Send confirmation email to guest (use waitUntil so the Worker doesn't
-  // terminate before the email is sent)
+  // Guest confirmation email - simple HTML + plain text
+  const guestText = `${name} 様
+
+${event.title} のご予約を承りました。
+
+■ 予約内容
+日付: ${event.date}
+時間: ${slot.startTime} - ${slot.endTime}
+${event.location ? `場所: ${event.location}\n` : ""}人数: ${partySize}名${
+    additionalNames.length > 0 ? `\n参加者:\n${participantsText}` : ""
+  }
+
+■ カレンダーに追加
+Googleカレンダー: ${googleCalUrl}
+ICSファイル: ${icsUrl}
+
+■ ご予約のキャンセル
+${cancelUrl}
+${
+  partySize > 1
+    ? `\n※ 人数の一部変更をご希望の場合は、${adminEmail || "管理者"} までご連絡ください。`
+    : ""
+}
+
+ご来場をお待ちしております。`;
+
+  const guestHtml = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#333;line-height:1.6;">
+<p>${name} 様</p>
+<p>${event.title} のご予約を承りました。</p>
+<p><strong>■ 予約内容</strong><br>
+日付: ${event.date}<br>
+時間: ${slot.startTime} - ${slot.endTime}<br>
+${event.location ? `場所: ${event.location}<br>` : ""}人数: ${partySize}名${
+    additionalNames.length > 0
+      ? `<br>参加者:<br>${allNames.map((n, i) => `&nbsp;&nbsp;${i + 1}. ${n}`).join("<br>")}`
+      : ""
+  }</p>
+<p><strong>■ カレンダーに追加</strong><br>
+Googleカレンダー: <a href="${googleCalUrl}">${googleCalUrl}</a><br>
+ICSファイル: <a href="${icsUrl}">${icsUrl}</a></p>
+<p><strong>■ ご予約のキャンセル</strong><br>
+<a href="${cancelUrl}">${cancelUrl}</a></p>
+${
+  partySize > 1
+    ? `<p style="color:#666;font-size:13px;">※ 人数の一部変更をご希望の場合は、<a href="mailto:${adminEmail || ""}">${adminEmail || "管理者"}</a> までご連絡ください。</p>`
+    : ""
+}
+<p>ご来場をお待ちしております。</p>
+</div>`;
+
   ctx.waitUntil(
     sendMail({
       to: email,
       subject: `【予約確認】${event.title}`,
-      html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>予約が確定しました</h2>
-        <table style="border-collapse: collapse; width: 100%;">
-          <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">イベント</td><td style="padding: 8px;">${event.title}</td></tr>
-          <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">日付</td><td style="padding: 8px;">${event.date}</td></tr>
-          <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">時間</td><td style="padding: 8px;">${slot.startTime} - ${slot.endTime}</td></tr>
-          <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">代表者</td><td style="padding: 8px;">${name}</td></tr>
-          <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">人数</td><td style="padding: 8px;">${partySize}名</td></tr>
-          ${
-            additionalNames.length > 0
-              ? `<tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">参加者</td><td style="padding: 8px;">${participantsHtml}</td></tr>`
-              : ""
-          }
-          ${event.location ? `<tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">場所</td><td style="padding: 8px;">${event.location}</td></tr>` : ""}
-        </table>
-        <div style="margin-top: 20px;">
-          <a href="${googleCalUrl}" target="_blank"
-             style="display: inline-block; padding: 10px 20px; background: #4285f4; color: white; text-decoration: none; border-radius: 4px;">
-            Googleカレンダーに追加
-          </a>
-        </div>
-        <div style="margin-top: 10px;">
-          <a href="${icsUrl}" target="_blank"
-             style="display: inline-block; padding: 10px 20px; background: #34a853; color: white; text-decoration: none; border-radius: 4px;">
-            カレンダーファイル(.ics)をダウンロード
-          </a>
-        </div>
-        <p style="margin-top: 20px; color: #666; font-size: 14px;">
-          ご来場をお待ちしております。
-        </p>
-        <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;" />
-        <p style="color: #666; font-size: 14px; margin-bottom: 12px;">
-          ご都合が悪くなった場合は、以下のボタンから予約をキャンセルできます。
-        </p>
-        <div>
-          <a href="${cancelUrl}" target="_blank"
-             style="display: inline-block; padding: 10px 20px; background: #ef4444; color: white; text-decoration: none; border-radius: 4px;">
-            予約をキャンセルする
-          </a>
-        </div>
-        ${
-          partySize > 1
-            ? `<p style="color: #666; font-size: 13px; margin-top: 16px;">
-                ※ 人数の一部変更（例: ${partySize}名 → 2名）をご希望の場合は、恐れ入りますが
-                <a href="mailto:${adminEmail || ""}" style="color: #3b82f6;">${adminEmail || "管理者"}</a>
-                までご連絡ください。
-              </p>`
-            : ""
-        }
-      </div>
-    `,
+      html: guestHtml,
+      text: guestText,
     }).catch((err) => console.error("[Mail] Failed to send confirmation:", err))
   );
 
-  // Send notification email to admin
+  // Admin notification
   if (adminEmail) {
     const newTotal = currentTotal + partySize;
+    const adminText = `新しい予約が入りました。
+
+■ イベント: ${event.title}
+日付: ${event.date}
+時間: ${slot.startTime} - ${slot.endTime}
+代表者: ${name}
+メール: ${email}
+人数: ${partySize}名${
+      additionalNames.length > 0 ? `\n参加者:\n${participantsText}` : ""
+    }
+現在の予約: ${newTotal}/${slot.capacity}名
+
+管理画面: ${adminEventUrl}`;
+
+    const adminHtml = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#333;line-height:1.6;">
+<p>新しい予約が入りました。</p>
+<p><strong>■ イベント: ${event.title}</strong><br>
+日付: ${event.date}<br>
+時間: ${slot.startTime} - ${slot.endTime}<br>
+代表者: ${name}<br>
+メール: ${email}<br>
+人数: ${partySize}名${
+      additionalNames.length > 0
+        ? `<br>参加者:<br>${allNames.map((n, i) => `&nbsp;&nbsp;${i + 1}. ${n}`).join("<br>")}`
+        : ""
+    }<br>
+現在の予約: ${newTotal}/${slot.capacity}名</p>
+<p>管理画面: <a href="${adminEventUrl}">${adminEventUrl}</a></p>
+</div>`;
+
     ctx.waitUntil(
       sendMail({
         to: adminEmail,
         subject: `【新規予約】${event.title} - ${name}様`,
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>新しい予約が入りました</h2>
-            <table style="border-collapse: collapse; width: 100%;">
-              <tr><td style="padding: 8px; font-weight: bold;">イベント</td><td style="padding: 8px;">${event.title}</td></tr>
-              <tr><td style="padding: 8px; font-weight: bold;">日付</td><td style="padding: 8px;">${event.date}</td></tr>
-              <tr><td style="padding: 8px; font-weight: bold;">時間</td><td style="padding: 8px;">${slot.startTime} - ${slot.endTime}</td></tr>
-              <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">代表者</td><td style="padding: 8px;">${name}</td></tr>
-              <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">メール</td><td style="padding: 8px;">${email}</td></tr>
-              <tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">人数</td><td style="padding: 8px;">${partySize}名</td></tr>
-              ${
-                additionalNames.length > 0
-                  ? `<tr><td style="padding: 8px; font-weight: bold; vertical-align: top;">参加者</td><td style="padding: 8px;">${participantsHtml}</td></tr>`
-                  : ""
-              }
-              <tr><td style="padding: 8px; font-weight: bold;">現在の予約状況</td><td style="padding: 8px;">${newTotal}/${slot.capacity}名</td></tr>
-            </table>
-            <div style="margin-top: 20px;">
-              <a href="${adminEventUrl}" target="_blank"
-                 style="display: inline-block; padding: 10px 20px; background: #3b82f6; color: white; text-decoration: none; border-radius: 4px;">
-                管理画面で確認
-              </a>
-            </div>
-          </div>
-        `,
-      }).catch((err) => console.error("[Mail] Failed to send admin notification:", err))
+        html: adminHtml,
+        text: adminText,
+      }).catch((err) =>
+        console.error("[Mail] Failed to send admin notification:", err)
+      )
     );
   }
 
