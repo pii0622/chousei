@@ -22,3 +22,4 @@ migrations_dir = "drizzle"
 [vars]
 NEXT_PUBLIC_APP_URL = "https://chousei.quiet-frog-fb2e.workers.dev"
 MAIL_FROM = "mail@olabodistillery.jp"
+ADMIN_EMAIL = "mail@olabodistillery.jp"
