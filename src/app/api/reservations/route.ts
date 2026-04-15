@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getDb } from "@/db";
 import { timeSlots, reservations } from "@/db/schema";
 import { sendMail } from "@/lib/mail";
@@ -105,6 +106,11 @@ export async function POST(request: Request) {
 
   const icsBase64 = btoa(icsContent);
 
+  const { env } = await getCloudflareContext({ async: true });
+  const appUrl =
+    (env as Record<string, string | undefined>).NEXT_PUBLIC_APP_URL || "";
+  const cancelUrl = `${appUrl}/reserve/cancel/${reservationId}`;
+
   sendMail({
     to: email,
     subject: `【予約確認】${event.title}`,
@@ -133,6 +139,11 @@ export async function POST(request: Request) {
         </div>
         <p style="margin-top: 20px; color: #666; font-size: 14px;">
           ご来場をお待ちしております。
+        </p>
+        <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;" />
+        <p style="color: #999; font-size: 12px;">
+          ご都合が悪くなった場合は、以下のリンクから予約をキャンセルできます：<br />
+          <a href="${cancelUrl}" style="color: #666;">${cancelUrl}</a>
         </p>
       </div>
     `,

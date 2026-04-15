@@ -106,6 +106,22 @@ export default function EventDetailPage() {
     window.open(`/api/admin/events/${eventId}/export?format=csv`, "_blank");
   };
 
+  const handleDeleteReservation = async (reservationId: string, name: string) => {
+    if (!confirm(`${name} さんの予約を削除しますか？`)) return;
+    const res = await fetch(`/api/reservations/${reservationId}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      alert("削除に失敗しました");
+      return;
+    }
+    // Refresh event data
+    const refreshed = await fetch(`/api/events/${eventId}`).then(
+      (r) => r.json() as Promise<Event & { error?: string }>
+    );
+    if (!refreshed.error) setEvent(refreshed);
+  };
+
   if (loading) {
     return <div className="text-gray-500">読み込み中...</div>;
   }
@@ -259,7 +275,8 @@ export default function EventDetailPage() {
                         <th className="pb-2 pr-4">名前</th>
                         <th className="pb-2 pr-4">メール</th>
                         <th className="pb-2 pr-4">人数</th>
-                        <th className="pb-2">予約日時</th>
+                        <th className="pb-2 pr-4">予約日時</th>
+                        <th className="pb-2"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -270,8 +287,16 @@ export default function EventDetailPage() {
                             {r.email}
                           </td>
                           <td className="py-2 pr-4">{r.partySize}名</td>
-                          <td className="py-2 text-gray-400">
+                          <td className="py-2 pr-4 text-gray-400">
                             {new Date(r.createdAt).toLocaleString("ja-JP")}
+                          </td>
+                          <td className="py-2 text-right">
+                            <button
+                              onClick={() => handleDeleteReservation(r.id, r.name)}
+                              className="text-xs text-red-500 hover:text-red-700 hover:underline"
+                            >
+                              削除
+                            </button>
                           </td>
                         </tr>
                       ))}
