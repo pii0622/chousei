@@ -114,7 +114,6 @@ export async function POST(request: Request) {
   const appUrl = envMap.NEXT_PUBLIC_APP_URL || "";
   const adminEmail = envMap.ADMIN_EMAIL;
   const cancelUrl = `${appUrl}/reserve/cancel/${reservationId}`;
-  const reserveUrl = `${appUrl}/reserve/${event.id}`;
   const adminEventUrl = `${appUrl}/admin/events/${event.id}`;
 
   const allNames = [name, ...additionalNames];
@@ -136,12 +135,10 @@ ${event.location ? `場所: ${event.location}\n` : ""}人数: ${partySize}名${
     additionalNames.length > 0 ? `\n参加者:\n${participantsText}` : ""
   }
 
-■ 予約の詳細・キャンセル
+■ 予約の詳細・キャンセル・時間変更
 ${cancelUrl}
 
-■ お時間を変更したい場合
-お手数ですが、新しい時間で予約をお取りいただいた後、上記URLから現在の予約をキャンセルしてください。
-新規予約: ${reserveUrl}
+時間を変更したい場合や、内容の確認・キャンセルは上記URLからお願いします。
 ${
   partySize > 1
     ? `\n※ 人数の一部変更をご希望の場合は、${adminEmail || "管理者"} までご連絡ください。`
@@ -161,10 +158,9 @@ ${event.location ? `場所: ${event.location}<br>` : ""}人数: ${partySize}名$
       ? `<br>参加者:<br>${allNames.map((n, i) => `&nbsp;&nbsp;${i + 1}. ${n}`).join("<br>")}`
       : ""
   }</p>
-<p><strong>■ 予約の詳細・キャンセル</strong><br>
-<a href="${cancelUrl}">${cancelUrl}</a></p>
-<p><strong>■ お時間を変更したい場合</strong><br>
-お手数ですが、<a href="${reserveUrl}">新しい時間で予約</a>をお取りいただいた後、上記URLから現在の予約をキャンセルしてください。</p>
+<p><strong>■ 予約の詳細・キャンセル・時間変更</strong><br>
+<a href="${cancelUrl}">${cancelUrl}</a><br>
+<span style="color:#666;font-size:13px;">時間を変更したい場合や、内容の確認・キャンセルは上記URLからお願いします。</span></p>
 ${
   partySize > 1
     ? `<p style="color:#666;font-size:13px;">※ 人数の一部変更をご希望の場合は、<a href="mailto:${adminEmail || ""}">${adminEmail || "管理者"}</a> までご連絡ください。</p>`
