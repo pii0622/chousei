@@ -103,13 +103,27 @@ export default function CancelPage() {
   const event = reservation.timeSlot.event;
   const slot = reservation.timeSlot;
 
+  const googleCalendarUrl = () => {
+    const dateClean = event.date.replace(/-/g, "");
+    const startClean = slot.startTime.replace(/:/g, "") + "00";
+    const endClean = slot.endTime.replace(/:/g, "") + "00";
+    const url = new URL("https://calendar.google.com/calendar/render");
+    url.searchParams.set("action", "TEMPLATE");
+    url.searchParams.set("text", event.title);
+    url.searchParams.set(
+      "dates",
+      `${dateClean}T${startClean}/${dateClean}T${endClean}`
+    );
+    url.searchParams.set("location", event.location);
+    return url.toString();
+  };
+
+  const icsUrl = `/api/reservations/${reservationId}/ics`;
+
   return (
     <div className="mx-auto max-w-lg px-4 py-12">
       <div className="rounded-2xl bg-white p-8 shadow-lg">
-        <h1 className="text-xl font-bold mb-4">予約のキャンセル</h1>
-        <p className="text-gray-600 mb-6">
-          以下の予約をキャンセルしますか？
-        </p>
+        <h1 className="text-xl font-bold mb-4">ご予約の詳細</h1>
         <div className="rounded-lg bg-gray-50 p-4 mb-6 space-y-2 text-sm">
           <div>
             <span className="font-semibold">イベント:</span> {event.title}
@@ -134,6 +148,37 @@ export default function CancelPage() {
             </div>
           )}
         </div>
+
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">
+            カレンダーに追加
+          </h2>
+          <div className="flex flex-col gap-2">
+            <a
+              href={googleCalendarUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center rounded-lg bg-blue-500 px-4 py-2.5 text-sm text-white font-medium hover:bg-blue-600 transition"
+            >
+              Googleカレンダーに追加
+            </a>
+            <a
+              href={icsUrl}
+              className="inline-flex items-center justify-center rounded-lg bg-green-500 px-4 py-2.5 text-sm text-white font-medium hover:bg-green-600 transition"
+            >
+              カレンダーファイル(.ics)をダウンロード
+            </a>
+          </div>
+        </div>
+
+        <hr className="border-gray-200 mb-6" />
+
+        <h2 className="text-sm font-semibold text-gray-700 mb-3">
+          予約のキャンセル
+        </h2>
+        <p className="text-sm text-gray-600 mb-4">
+          ご都合が悪くなった場合は以下のボタンから予約をキャンセルできます。
+        </p>
 
         {error && (
           <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 mb-4">
