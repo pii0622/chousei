@@ -135,7 +135,7 @@ ${event.location ? `場所: ${event.location}\n` : ""}人数: ${partySize}名${
     additionalNames.length > 0 ? `\n参加者:\n${participantsText}` : ""
   }
 
-■ ご予約のキャンセル / カレンダー追加
+■ 予約の詳細・キャンセル
 ${cancelUrl}
 ${
   partySize > 1
@@ -156,7 +156,7 @@ ${event.location ? `場所: ${event.location}<br>` : ""}人数: ${partySize}名$
       ? `<br>参加者:<br>${allNames.map((n, i) => `&nbsp;&nbsp;${i + 1}. ${n}`).join("<br>")}`
       : ""
   }</p>
-<p><strong>■ ご予約のキャンセル / カレンダー追加</strong><br>
+<p><strong>■ 予約の詳細・キャンセル</strong><br>
 <a href="${cancelUrl}">${cancelUrl}</a></p>
 ${
   partySize > 1
