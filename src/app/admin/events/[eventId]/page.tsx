@@ -46,6 +46,11 @@ export default function EventDetailPage() {
   const [editDescription, setEditDescription] = useState("");
   const [editLocation, setEditLocation] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [addingSlot, setAddingSlot] = useState(false);
+  const [newSlotStart, setNewSlotStart] = useState("11:00");
+  const [newSlotEnd, setNewSlotEnd] = useState("12:00");
+  const [newSlotCapacity, setNewSlotCapacity] = useState(10);
+  const [savingSlot, setSavingSlot] = useState(false);
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const appUrl =
@@ -156,6 +161,72 @@ export default function EventDetailPage() {
     }
   };
 
+  const refreshEvent = async () => {
+    const data = await fetch(`/api/events/${eventId}`).then(
+      (r) => r.json() as Promise<Event & { error?: string }>
+    );
+    if (!data.error) setEvent(data);
+  };
+
+  const handleAddSlot = async () => {
+    if (!newSlotStart || !newSlotEnd) return;
+    setSavingSlot(true);
+    try {
+      const res = await fetch(`/api/events/${eventId}/timeslots`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startTime: newSlotStart,
+          endTime: newSlotEnd,
+          capacity: newSlotCapacity,
+        }),
+      });
+      if (!res.ok) {
+        alert("追加に失敗しました");
+        return;
+      }
+      await refreshEvent();
+      setAddingSlot(false);
+    } catch {
+      alert("追加に失敗しました");
+    } finally {
+      setSavingSlot(false);
+    }
+  };
+
+  const handleMoveSlot = async (index: number, direction: "up" | "down") => {
+    if (!event) return;
+    const slots = [...event.timeSlots];
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (target < 0 || target >= slots.length) return;
+    [slots[index], slots[target]] = [slots[target], slots[index]];
+    const slotIds = slots.map((s) => s.id);
+    await fetch(`/api/events/${eventId}/timeslots`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slotIds }),
+    });
+    await refreshEvent();
+  };
+
+  const handleDeleteSlot = async (slotId: string, label: string, hasReservations: boolean) => {
+    if (hasReservations) {
+      alert("予約が入っている時間帯は削除できません");
+      return;
+    }
+    if (!confirm(`${label} を削除しますか？`)) return;
+    const res = await fetch(
+      `/api/events/${eventId}/timeslots?slotId=${slotId}`,
+      { method: "DELETE" }
+    );
+    if (!res.ok) {
+      const data = (await res.json()) as { error?: string };
+      alert(data.error || "削除に失敗しました");
+      return;
+    }
+    await refreshEvent();
+  };
+
   const handleDeleteReservation = async (reservationId: string, name: string) => {
     if (!confirm(`${name} さんの予約を削除しますか？`)) return;
     const res = await fetch(`/api/reservations/${reservationId}`, {
@@ -165,11 +236,7 @@ export default function EventDetailPage() {
       alert("削除に失敗しました");
       return;
     }
-    // Refresh event data
-    const refreshed = await fetch(`/api/events/${eventId}`).then(
-      (r) => r.json() as Promise<Event & { error?: string }>
-    );
-    if (!refreshed.error) setEvent(refreshed);
+    await refreshEvent();
   };
 
   if (loading) {
@@ -354,19 +421,107 @@ export default function EventDetailPage() {
 
       {/* Reservations by Time Slot */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold">時間帯別予約一覧</h2>
-        {event.timeSlots.map((slot) => {
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">時間帯別予約一覧</h2>
+          <button
+            onClick={() => setAddingSlot(!addingSlot)}
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+          >
+            {addingSlot ? "閉じる" : "+ 時間帯を追加"}
+          </button>
+        </div>
+
+        {addingSlot && (
+          <div className="rounded-xl bg-white p-4 shadow space-y-3">
+            <div className="flex items-center gap-3">
+              <input
+                type="time"
+                value={newSlotStart}
+                onChange={(e) => setNewSlotStart(e.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <span className="text-gray-400">-</span>
+              <input
+                type="time"
+                value={newSlotEnd}
+                onChange={(e) => setNewSlotEnd(e.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min={1}
+                  value={newSlotCapacity}
+                  onChange={(e) => setNewSlotCapacity(Number(e.target.value))}
+                  className="w-20 rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-500">名</span>
+              </div>
+              <button
+                onClick={handleAddSlot}
+                disabled={savingSlot}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white font-medium hover:bg-blue-700 disabled:opacity-50 transition"
+              >
+                {savingSlot ? "追加中..." : "追加"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {event.timeSlots.map((slot, slotIndex) => {
           const used = slot.reservations.reduce(
             (s, r) => s + r.partySize,
             0
           );
           const remaining = slot.capacity - used;
+          const hasReservations = slot.reservations.length > 0;
           return (
             <div key={slot.id} className="rounded-xl bg-white p-6 shadow">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold">
-                  {slot.startTime} - {slot.endTime}
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold">
+                    {slot.startTime} - {slot.endTime}
+                  </h3>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => handleMoveSlot(slotIndex, "up")}
+                      disabled={slotIndex === 0}
+                      className="text-xs text-gray-400 hover:text-gray-600 disabled:opacity-30 px-1"
+                      title="上に移動"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      onClick={() => handleMoveSlot(slotIndex, "down")}
+                      disabled={slotIndex === event.timeSlots.length - 1}
+                      className="text-xs text-gray-400 hover:text-gray-600 disabled:opacity-30 px-1"
+                      title="下に移動"
+                    >
+                      ▼
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleDeleteSlot(
+                          slot.id,
+                          `${slot.startTime}-${slot.endTime}`,
+                          hasReservations
+                        )
+                      }
+                      className={`text-xs px-1 ${
+                        hasReservations
+                          ? "text-gray-300 cursor-not-allowed"
+                          : "text-red-400 hover:text-red-600"
+                      }`}
+                      title={
+                        hasReservations
+                          ? "予約ありのため削除不可"
+                          : "この時間帯を削除"
+                      }
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
                 <span
                   className={`text-sm px-3 py-1 rounded-full ${
                     remaining <= 0
