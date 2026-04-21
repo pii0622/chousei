@@ -122,10 +122,16 @@ export default function NewEventPage() {
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              rows={3}
+              rows={8}
               placeholder="イベントの説明を入力..."
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-sm"
             />
+            <div className="mt-1 text-xs text-gray-400 space-y-0.5">
+              <p>Markdown記法が使えます:</p>
+              <p>画像: <code className="bg-gray-100 px-1 rounded">![説明](画像URL)</code></p>
+              <p>リンク: <code className="bg-gray-100 px-1 rounded">[テキスト](URL)</code></p>
+              <p>太字: <code className="bg-gray-100 px-1 rounded">**太字**</code>　見出し: <code className="bg-gray-100 px-1 rounded">## 見出し</code></p>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
