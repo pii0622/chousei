@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import MarkdownContent from "@/components/MarkdownContent";
 
 interface Reservation {
   id: string;
@@ -269,9 +270,9 @@ export default function ReservePage() {
         {/* Event Info */}
         <h1 className="text-2xl font-bold mb-2">{event.title}</h1>
         {event.description && (
-          <p className="text-gray-600 mb-4 whitespace-pre-wrap">
-            {event.description}
-          </p>
+          <div className="mb-4">
+            <MarkdownContent content={event.description} />
+          </div>
         )}
         <div className="flex flex-wrap gap-4 mb-6 text-sm text-gray-700">
           <span className="inline-flex items-center gap-1 bg-gray-100 px-3 py-1 rounded-full">
