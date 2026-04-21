@@ -268,13 +268,8 @@ export default function ReservePage() {
     <div className="mx-auto max-w-lg px-4 py-8">
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         {/* Event Info */}
-        <h1 className="text-2xl font-bold mb-2">{event.title}</h1>
-        {event.description && (
-          <div className="mb-4">
-            <MarkdownContent content={event.description} />
-          </div>
-        )}
-        <div className="flex flex-wrap gap-4 mb-6 text-sm text-gray-700">
+        <h1 className="text-2xl font-bold mb-1">{event.title}</h1>
+        <div className="flex flex-wrap gap-4 mb-4 text-sm text-gray-700">
           <span className="inline-flex items-center gap-1 bg-gray-100 px-3 py-1 rounded-full">
             <svg
               className="w-4 h-4"
@@ -316,6 +311,11 @@ export default function ReservePage() {
             </span>
           )}
         </div>
+        {event.description && (
+          <div className="mb-6">
+            <MarkdownContent content={event.description} />
+          </div>
+        )}
 
         {/* Time Slots */}
         <h2 className="text-lg font-semibold mb-3">時間帯を選択</h2>
