@@ -3,10 +3,17 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import Link from "next/link";
 
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+}
+
 const AuthContext = createContext<{
-  authenticated: boolean;
-  setAuthenticated: (v: boolean) => void;
-}>({ authenticated: false, setAuthenticated: () => {} });
+  user: User | null;
+  setUser: (u: User | null) => void;
+}>({ user: null, setUser: () => {} });
 
 export function useAuth() {
   return useContext(AuthContext);
@@ -17,17 +24,22 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [authenticated, setAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem("admin_auth");
-    if (saved === "true") {
-      setAuthenticated(true);
-    }
-    setChecking(false);
+    fetch("/api/admin/auth")
+      .then((r) => {
+        if (r.ok) return r.json() as Promise<{ user: User }>;
+        return null;
+      })
+      .then((data) => {
+        if (data?.user) setUser(data.user);
+      })
+      .finally(() => setChecking(false));
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -36,14 +48,23 @@ export default function AdminLayout({
     const res = await fetch("/api/admin/auth", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ email, password }),
     });
-    if (res.ok) {
-      setAuthenticated(true);
-      sessionStorage.setItem("admin_auth", "true");
+    const data = (await res.json()) as {
+      ok?: boolean;
+      user?: User;
+      error?: string;
+    };
+    if (res.ok && data.user) {
+      setUser(data.user);
     } else {
-      setError("パスワードが正しくありません");
+      setError(data.error || "ログインに失敗しました");
     }
+  };
+
+  const handleLogout = async () => {
+    await fetch("/api/admin/auth", { method: "DELETE" });
+    setUser(null);
   };
 
   if (checking) {
@@ -54,7 +75,7 @@ export default function AdminLayout({
     );
   }
 
-  if (!authenticated) {
+  if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <form
@@ -63,15 +84,22 @@ export default function AdminLayout({
         >
           <h1 className="text-xl font-bold mb-6 text-center">管理者ログイン</h1>
           <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="メールアドレス"
+            required
+            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 mb-3 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="パスワード"
+            required
             className="w-full rounded-lg border border-gray-300 px-4 py-2.5 mb-4 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
-          {error && (
-            <p className="text-red-500 text-sm mb-4">{error}</p>
-          )}
+          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
           <button
             type="submit"
             className="w-full rounded-lg bg-blue-600 px-6 py-2.5 text-white font-medium hover:bg-blue-700 transition"
@@ -84,7 +112,7 @@ export default function AdminLayout({
   }
 
   return (
-    <AuthContext.Provider value={{ authenticated, setAuthenticated }}>
+    <AuthContext.Provider value={{ user, setUser }}>
       <div className="min-h-screen">
         <nav className="bg-white border-b shadow-sm">
           <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between">
@@ -92,17 +120,23 @@ export default function AdminLayout({
               Chousei 管理画面
             </Link>
             <div className="flex items-center gap-4">
+              {user.role === "super_admin" && (
+                <Link
+                  href="/admin/accounts"
+                  className="text-sm text-gray-600 hover:text-gray-800"
+                >
+                  アカウント管理
+                </Link>
+              )}
               <Link
                 href="/admin/events/new"
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white font-medium hover:bg-blue-700 transition"
               >
                 + イベント作成
               </Link>
+              <span className="text-sm text-gray-500">{user.name}</span>
               <button
-                onClick={() => {
-                  sessionStorage.removeItem("admin_auth");
-                  setAuthenticated(false);
-                }}
+                onClick={handleLogout}
                 className="text-sm text-gray-500 hover:text-gray-700"
               >
                 ログアウト

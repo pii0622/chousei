@@ -15,6 +15,13 @@
       "when": 1776218034622,
       "tag": "0001_add_additional_names",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1777414896652,
+      "tag": "0002_add_admin_users",
+      "breakpoints": true
     }
   ]
 }
