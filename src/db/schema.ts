@@ -1,15 +1,49 @@
 import { sqliteTable, text, integer, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { sql, relations } from "drizzle-orm";
 
-export const events = sqliteTable("Event", {
+// --- Admin Users ---
+
+export const adminUsers = sqliteTable(
+  "AdminUser",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    email: text("email").notNull(),
+    passwordHash: text("passwordHash").notNull(),
+    name: text("name").notNull(),
+    role: text("role").notNull().default("admin"), // 'super_admin' | 'admin'
+    createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => [uniqueIndex("AdminUser_email_key").on(t.email)]
+);
+
+export const adminInvites = sqliteTable("AdminInvite", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  title: text("title").notNull(),
-  description: text("description").notNull().default(""),
-  date: text("date").notNull(), // YYYY-MM-DD
-  location: text("location").notNull().default(""),
+  createdBy: text("createdBy")
+    .notNull()
+    .references(() => adminUsers.id, { onDelete: "cascade" }),
+  used: integer("used", { mode: "boolean" }).notNull().default(false),
+  expiresAt: text("expiresAt").notNull(),
   createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+// --- Events ---
+
+export const events = sqliteTable(
+  "Event",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    adminUserId: text("adminUserId").references(() => adminUsers.id, {
+      onDelete: "cascade",
+    }),
+    title: text("title").notNull(),
+    description: text("description").notNull().default(""),
+    date: text("date").notNull(), // YYYY-MM-DD
+    location: text("location").notNull().default(""),
+    createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => [index("Event_adminUserId_idx").on(t.adminUserId)]
+);
 
 export const timeSlots = sqliteTable(
   "TimeSlot",
@@ -18,6 +52,7 @@ export const timeSlots = sqliteTable(
     eventId: text("eventId")
       .notNull()
       .references(() => events.id, { onDelete: "cascade" }),
+    title: text("title"), // optional title for the time slot
     startTime: text("startTime").notNull(), // HH:mm
     endTime: text("endTime").notNull(), // HH:mm
     capacity: integer("capacity").notNull(),
@@ -36,7 +71,7 @@ export const reservations = sqliteTable(
     name: text("name").notNull(),
     email: text("email").notNull(),
     partySize: integer("partySize").notNull().default(1),
-    additionalNames: text("additionalNames"), // JSON-encoded array of names
+    additionalNames: text("additionalNames"),
     createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
   (t) => [
@@ -45,8 +80,25 @@ export const reservations = sqliteTable(
   ]
 );
 
-// Relations
-export const eventsRelations = relations(events, ({ many }) => ({
+// --- Relations ---
+
+export const adminUsersRelations = relations(adminUsers, ({ many }) => ({
+  events: many(events),
+  invites: many(adminInvites),
+}));
+
+export const adminInvitesRelations = relations(adminInvites, ({ one }) => ({
+  creator: one(adminUsers, {
+    fields: [adminInvites.createdBy],
+    references: [adminUsers.id],
+  }),
+}));
+
+export const eventsRelations = relations(events, ({ one, many }) => ({
+  adminUser: one(adminUsers, {
+    fields: [events.adminUserId],
+    references: [adminUsers.id],
+  }),
   timeSlots: many(timeSlots),
 }));
 
@@ -65,6 +117,8 @@ export const reservationsRelations = relations(reservations, ({ one }) => ({
   }),
 }));
 
+export type AdminUser = typeof adminUsers.$inferSelect;
+export type AdminInvite = typeof adminInvites.$inferSelect;
 export type Event = typeof events.$inferSelect;
 export type TimeSlot = typeof timeSlots.$inferSelect;
 export type Reservation = typeof reservations.$inferSelect;
