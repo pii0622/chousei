@@ -17,6 +17,7 @@ interface Event {
   date: string;
   location: string;
   timeSlots: TimeSlot[];
+  adminUser?: { name: string; email: string } | null;
 }
 
 export default function AdminPage() {
@@ -78,6 +79,11 @@ export default function AdminPage() {
                 <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
                   <span>{event.date}</span>
                   {event.location && <span>{event.location}</span>}
+                  {event.adminUser && (
+                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
+                      {event.adminUser.name}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="text-right">
