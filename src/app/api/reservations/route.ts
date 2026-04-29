@@ -3,7 +3,7 @@ import { eq, and } from "drizzle-orm";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getDb } from "@/db";
 import { timeSlots, reservations } from "@/db/schema";
-import { sendMail } from "@/lib/mail";
+import { sendMail, isEmailVerified } from "@/lib/mail";
 
 // POST create reservation
 export async function POST(request: Request) {
@@ -118,6 +118,10 @@ export async function POST(request: Request) {
   const appUrl = envMap.NEXT_PUBLIC_APP_URL || "";
   const adminEmail = eventAdmin?.email || envMap.ADMIN_EMAIL;
   const adminName = eventAdmin?.name;
+  const adminVerified = adminEmail
+    ? await isEmailVerified(adminEmail)
+    : false;
+  const verifiedFromEmail = adminVerified ? adminEmail : undefined;
   const cancelUrl = `${appUrl}/reserve/cancel/${reservationId}`;
   const adminEventUrl = `${appUrl}/admin/events/${event.id}`;
 
@@ -180,6 +184,7 @@ ${
       subject: `【予約確認】${event.title}`,
       html: guestHtml,
       text: guestText,
+      fromEmail: verifiedFromEmail,
       fromName: adminName,
       replyTo: adminEmail,
     }).catch((err) => console.error("[Mail] Failed to send confirmation:", err))
@@ -221,6 +226,7 @@ ${
     ctx.waitUntil(
       sendMail({
         to: adminEmail,
+        fromEmail: verifiedFromEmail,
         subject: `【新規予約】${event.title} - ${name}様`,
         html: adminHtml,
         text: adminText,

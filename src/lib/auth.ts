@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
+import { requestSenderVerification } from "@/lib/mail";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
@@ -132,5 +133,10 @@ export async function ensureSuperAdmin(): Promise<void> {
       name: "管理者",
       role: "super_admin",
     });
+
+    // Auto-trigger sender verification for super admin
+    requestSenderVerification(email, "管理者").catch((err) =>
+      console.error("[Mail] Failed to request super admin verification:", err)
+    );
   }
 }

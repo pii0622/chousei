@@ -29,6 +29,17 @@ export default function AdminLayout({
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [checking, setChecking] = useState(true);
+  const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyMessage, setVerifyMessage] = useState("");
+
+  const checkEmailVerification = () => {
+    fetch("/api/admin/verify-email")
+      .then((r) => (r.ok ? (r.json() as Promise<{ verified: boolean }>) : null))
+      .then((data) => {
+        if (data) setEmailVerified(data.verified);
+      });
+  };
 
   useEffect(() => {
     fetch("/api/admin/auth")
@@ -37,7 +48,11 @@ export default function AdminLayout({
         return null;
       })
       .then((data) => {
-        if (data?.user) setUser(data.user);
+        if (data?.user) {
+          setUser(data.user);
+          // Check email verification after auth
+          checkEmailVerification();
+        }
       })
       .finally(() => setChecking(false));
   }, []);
@@ -57,8 +72,34 @@ export default function AdminLayout({
     };
     if (res.ok && data.user) {
       setUser(data.user);
+      checkEmailVerification();
     } else {
       setError(data.error || "ログインに失敗しました");
+    }
+  };
+
+  const handleRequestVerification = async () => {
+    setVerifying(true);
+    setVerifyMessage("");
+    try {
+      const res = await fetch("/api/admin/verify-email", { method: "POST" });
+      const data = (await res.json()) as {
+        verified?: boolean;
+        message?: string;
+        error?: string;
+      };
+      if (data.verified) {
+        setEmailVerified(true);
+        setVerifyMessage("認証済みです");
+      } else if (data.message) {
+        setVerifyMessage(data.message);
+      } else if (data.error) {
+        setVerifyMessage(`エラー: ${data.error}`);
+      }
+    } catch {
+      setVerifyMessage("認証リクエストに失敗しました");
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -144,6 +185,34 @@ export default function AdminLayout({
             </div>
           </div>
         </nav>
+        {emailVerified === false && (
+          <div className="bg-yellow-50 border-b border-yellow-200">
+            <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between">
+              <div className="text-sm text-yellow-800">
+                <strong>メール認証が必要です:</strong>{" "}
+                予約確認メールを送信するには、メールアドレスの認証が必要です。
+                {verifyMessage && (
+                  <span className="ml-2 text-yellow-600">{verifyMessage}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleRequestVerification}
+                  disabled={verifying}
+                  className="rounded bg-yellow-600 px-3 py-1 text-xs text-white font-medium hover:bg-yellow-700 disabled:opacity-50"
+                >
+                  {verifying ? "送信中..." : "認証メールを送信"}
+                </button>
+                <button
+                  onClick={checkEmailVerification}
+                  className="rounded bg-yellow-100 px-3 py-1 text-xs text-yellow-700 hover:bg-yellow-200"
+                >
+                  状態を更新
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
       </div>
     </AuthContext.Provider>
