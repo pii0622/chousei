@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { adminInvites, adminUsers } from "@/db/schema";
 import { hashPassword } from "@/lib/auth";
+import { requestSenderVerification } from "@/lib/mail";
 
 // GET validate invite token
 export async function GET(request: Request) {
@@ -105,6 +106,11 @@ export async function POST(request: Request) {
     .update(adminInvites)
     .set({ used: true })
     .where(eq(adminInvites.id, body.token));
+
+  // Auto-trigger SendGrid sender verification
+  requestSenderVerification(body.email, body.name).catch((err) =>
+    console.error("[Mail] Failed to request sender verification:", err)
+  );
 
   return NextResponse.json({ ok: true }, { status: 201 });
 }
