@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import QRCode from "qrcode";
 import MarkdownContent from "@/components/MarkdownContent";
 
@@ -394,6 +395,12 @@ export default function EventDetailPage() {
       <div className="rounded-xl bg-white p-6 shadow">
         <h2 className="text-lg font-semibold mb-4">アクション</h2>
         <div className="flex flex-wrap gap-3">
+          <Link
+            href={`/admin/events/${eventId}/email`}
+            className="rounded-lg bg-blue-500 px-4 py-2 text-sm text-white font-medium hover:bg-blue-600 transition"
+          >
+            一括メール送信
+          </Link>
           <button
             onClick={handleSendReminder}
             disabled={sendingReminder}
