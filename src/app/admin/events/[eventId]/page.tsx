@@ -41,8 +41,6 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
-  const [sendingReminder, setSendingReminder] = useState(false);
-  const [reminderResult, setReminderResult] = useState("");
   const [copiedEmails, setCopiedEmails] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -50,6 +48,7 @@ export default function EventDetailPage() {
   const [editLocation, setEditLocation] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [addingSlot, setAddingSlot] = useState(false);
+  const [viewMode, setViewMode] = useState<"timeslot" | "participant">("timeslot");
   const [newSlotTitle, setNewSlotTitle] = useState("");
   const [newSlotStart, setNewSlotStart] = useState("11:00");
   const [newSlotEnd, setNewSlotEnd] = useState("12:00");
@@ -86,25 +85,6 @@ export default function EventDetailPage() {
     setDeleting(true);
     await fetch(`/api/events/${eventId}`, { method: "DELETE" });
     router.push("/admin");
-  };
-
-  const handleSendReminder = async () => {
-    if (!confirm("全予約者にリマインダーメールを送信しますか？")) return;
-    setSendingReminder(true);
-    setReminderResult("");
-    try {
-      const res = await fetch(`/api/admin/events/${eventId}/reminders`, {
-        method: "POST",
-      });
-      const data = (await res.json()) as { sent: number; failed: number; total: number };
-      setReminderResult(
-        `送信完了: ${data.sent}件成功 / ${data.failed}件失敗 (合計${data.total}件)`
-      );
-    } catch {
-      setReminderResult("送信に失敗しました");
-    } finally {
-      setSendingReminder(false);
-    }
   };
 
   const handleCopyEmails = async () => {
@@ -405,13 +385,6 @@ export default function EventDetailPage() {
             一括メール送信
           </Link>
           <button
-            onClick={handleSendReminder}
-            disabled={sendingReminder}
-            className="rounded-lg bg-yellow-500 px-4 py-2 text-sm text-white font-medium hover:bg-yellow-600 disabled:opacity-50 transition"
-          >
-            {sendingReminder ? "送信中..." : "リマインダーメール送信"}
-          </button>
-          <button
             onClick={handleCopyEmails}
             className="rounded-lg bg-purple-500 px-4 py-2 text-sm text-white font-medium hover:bg-purple-600 transition"
           >
@@ -431,12 +404,113 @@ export default function EventDetailPage() {
             イベント削除
           </button>
         </div>
-        {reminderResult && (
-          <p className="mt-3 text-sm text-gray-600">{reminderResult}</p>
-        )}
       </div>
 
-      {/* Reservations by Time Slot */}
+      {/* View Toggle */}
+      <div className="flex items-center gap-2 mb-2">
+        <button
+          onClick={() => setViewMode("timeslot")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+            viewMode === "timeslot"
+              ? "bg-gray-800 text-white"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
+        >
+          時間帯別
+        </button>
+        <button
+          onClick={() => setViewMode("participant")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+            viewMode === "participant"
+              ? "bg-gray-800 text-white"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
+        >
+          参加者別
+        </button>
+      </div>
+
+      {/* Participant View */}
+      {viewMode === "participant" && (
+        <div className="rounded-xl bg-white p-6 shadow">
+          <h2 className="text-lg font-semibold mb-4">参加者別一覧</h2>
+          {(() => {
+            const participantMap = new Map<
+              string,
+              {
+                name: string;
+                email: string;
+                slots: { startTime: string; endTime: string; title: string | null; partySize: number; additionalNames: string | null; reservationId: string }[];
+              }
+            >();
+            event.timeSlots.forEach((slot) => {
+              slot.reservations.forEach((r) => {
+                const key = r.email;
+                if (!participantMap.has(key)) {
+                  participantMap.set(key, { name: r.name, email: r.email, slots: [] });
+                }
+                participantMap.get(key)!.slots.push({
+                  startTime: slot.startTime,
+                  endTime: slot.endTime,
+                  title: slot.title,
+                  partySize: r.partySize,
+                  additionalNames: r.additionalNames,
+                  reservationId: r.id,
+                });
+              });
+            });
+
+            const participants = Array.from(participantMap.values());
+
+            if (participants.length === 0) {
+              return <p className="text-sm text-gray-400">予約者はまだいません</p>;
+            }
+
+            return (
+              <div className="space-y-3">
+                {participants.map((p) => (
+                  <div key={p.email} className="rounded-lg border p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <span className="font-semibold">{p.name}</span>
+                        <span className="ml-2 text-sm text-gray-500">{p.email}</span>
+                      </div>
+                      <span className="text-sm text-gray-500">{p.slots.length}枠</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {p.slots.map((s) => {
+                        const extras: string[] = s.additionalNames
+                          ? (JSON.parse(s.additionalNames) as string[])
+                          : [];
+                        return (
+                          <div
+                            key={s.reservationId}
+                            className="text-xs bg-blue-50 text-blue-800 px-3 py-1.5 rounded-lg"
+                          >
+                            <div className="font-medium">
+                              {s.title && <span>{s.title} </span>}
+                              {s.startTime}-{s.endTime}
+                            </div>
+                            <div className="text-blue-600">
+                              {s.partySize}名
+                              {extras.length > 0 && (
+                                <span className="ml-1">({extras.join(", ")})</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Time Slot View */}
+      {viewMode === "timeslot" && (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">時間帯別予約一覧</h2>
@@ -619,6 +693,7 @@ export default function EventDetailPage() {
           );
         })}
       </div>
+      )}
     </div>
   );
 }
