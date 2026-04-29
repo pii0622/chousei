@@ -2,14 +2,18 @@ import { NextResponse } from "next/server";
 import { eq, asc } from "drizzle-orm";
 import { getDb } from "@/db";
 import { events, timeSlots, reservations } from "@/db/schema";
+import { requireEventOwner } from "@/lib/api-auth";
 
-// GET export reservations as CSV
+// GET export reservations as CSV (auth + ownership required)
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
+  const { eventId: eid } = await params;
+  const auth = await requireEventOwner(eid);
+  if ("error" in auth) return auth.error;
   const db = await getDb();
-  const { eventId } = await params;
+  const eventId = eid;
   const url = new URL(request.url);
   const format = url.searchParams.get("format") || "csv";
 

@@ -65,9 +65,10 @@ export async function verifyPassword(
 
 async function getJwtSecret(): Promise<Uint8Array> {
   const { env } = await getCloudflareContext({ async: true });
-  const secret =
-    (env as Record<string, string | undefined>).JWT_SECRET ||
-    "fallback-dev-secret-change-me";
+  const secret = (env as Record<string, string | undefined>).JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET environment variable must be set");
+  }
   return new TextEncoder().encode(secret);
 }
 

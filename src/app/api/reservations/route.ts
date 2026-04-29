@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     );
   }
 
-  // Check capacity
+  // Check capacity (initial check for user feedback)
   const currentTotal = timeSlot.reservations.reduce(
     (sum, r) => sum + r.partySize,
     0
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
 
   if (partySize > remaining) {
     return NextResponse.json(
-      { error: `Insufficient capacity. Remaining: ${remaining}` },
+      { error: `定員に達しています。残り: ${remaining}名` },
       { status: 409 }
     );
   }
@@ -93,11 +93,13 @@ export async function POST(request: Request) {
 
   if (existing) {
     return NextResponse.json(
-      { error: "You have already reserved this time slot" },
+      { error: "このメールアドレスでは既に予約済みです" },
       { status: 409 }
     );
   }
 
+  // Insert reservation, then re-verify capacity to prevent race condition.
+  // If over capacity after insert, roll back.
   const reservationId = crypto.randomUUID();
   await db.insert(reservations).values({
     id: reservationId,
@@ -108,6 +110,19 @@ export async function POST(request: Request) {
     additionalNames:
       additionalNames.length > 0 ? JSON.stringify(additionalNames) : null,
   });
+
+  // Re-check total after insert (race condition guard)
+  const allReservations = await db.query.reservations.findMany({
+    where: eq(reservations.timeSlotId, timeSlotId),
+  });
+  const newTotal = allReservations.reduce((sum, r) => sum + r.partySize, 0);
+  if (newTotal > timeSlot.capacity) {
+    await db.delete(reservations).where(eq(reservations.id, reservationId));
+    return NextResponse.json(
+      { error: "申し訳ございません。定員に達しました。" },
+      { status: 409 }
+    );
+  }
 
   const event = timeSlot.event;
   const slot = timeSlot;
