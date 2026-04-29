@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { eq, asc } from "drizzle-orm";
 import { getDb } from "@/db";
 import { events, timeSlots, reservations } from "@/db/schema";
-import { getSession } from "@/lib/auth";
+import { requireEventOwner } from "@/lib/api-auth";
 
 // GET single event with reservations (public - no auth required for reservation page)
 export async function GET(
@@ -32,13 +32,16 @@ export async function GET(
   return NextResponse.json(event);
 }
 
-// PUT update event
+// PUT update event (auth + ownership required)
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
-  const db = await getDb();
   const { eventId } = await params;
+  const auth = await requireEventOwner(eventId);
+  if ("error" in auth) return auth.error;
+
+  const db = await getDb();
   const body = (await request.json()) as {
     title: string;
     description?: string;
@@ -47,7 +50,6 @@ export async function PUT(
     timeSlots?: { startTime: string; endTime: string; capacity: number }[];
   };
 
-  // Delete existing time slots and recreate
   await db.delete(timeSlots).where(eq(timeSlots.eventId, eventId));
 
   await db
@@ -77,15 +79,16 @@ export async function PUT(
   return NextResponse.json({ ok: true });
 }
 
-// PATCH update event metadata only (title, description, location)
-// Intentionally does NOT allow changing date or timeSlots to avoid
-// breaking existing reservations.
+// PATCH update event metadata (auth + ownership required)
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
-  const db = await getDb();
   const { eventId } = await params;
+  const auth = await requireEventOwner(eventId);
+  if ("error" in auth) return auth.error;
+
+  const db = await getDb();
   const body = (await request.json()) as {
     title?: string;
     description?: string;
@@ -104,7 +107,8 @@ export async function PATCH(
     }
     updates.title = body.title;
   }
-  if (typeof body.description === "string") updates.description = body.description;
+  if (typeof body.description === "string")
+    updates.description = body.description;
   if (typeof body.location === "string") updates.location = body.location;
 
   await db.update(events).set(updates).where(eq(events.id, eventId));
@@ -112,13 +116,16 @@ export async function PATCH(
   return NextResponse.json({ ok: true });
 }
 
-// DELETE event
+// DELETE event (auth + ownership required)
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
-  const db = await getDb();
   const { eventId } = await params;
+  const auth = await requireEventOwner(eventId);
+  if ("error" in auth) return auth.error;
+
+  const db = await getDb();
   await db.delete(events).where(eq(events.id, eventId));
   return NextResponse.json({ ok: true });
 }

@@ -2,14 +2,18 @@ import { NextResponse } from "next/server";
 import { eq, asc } from "drizzle-orm";
 import { getDb } from "@/db";
 import { timeSlots } from "@/db/schema";
+import { requireEventOwner } from "@/lib/api-auth";
 
-// POST add a new time slot
+// POST add a new time slot (auth + ownership required)
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
-  const db = await getDb();
   const { eventId } = await params;
+  const auth = await requireEventOwner(eventId);
+  if ("error" in auth) return auth.error;
+
+  const db = await getDb();
   const body = (await request.json()) as {
     title?: string;
     startTime: string;
@@ -48,13 +52,16 @@ export async function POST(
   return NextResponse.json({ id }, { status: 201 });
 }
 
-// PUT reorder time slots
+// PUT reorder time slots (auth + ownership required)
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
-  const db = await getDb();
   const { eventId } = await params;
+  const auth = await requireEventOwner(eventId);
+  if ("error" in auth) return auth.error;
+
+  const db = await getDb();
   const body = (await request.json()) as { slotIds: string[] };
 
   if (!body.slotIds || !Array.isArray(body.slotIds)) {
@@ -91,13 +98,16 @@ export async function PUT(
   return NextResponse.json({ ok: true });
 }
 
-// DELETE a time slot (only if no reservations)
+// DELETE a time slot (auth + ownership required, only if no reservations)
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
-  const db = await getDb();
   const { eventId } = await params;
+  const auth = await requireEventOwner(eventId);
+  if ("error" in auth) return auth.error;
+
+  const db = await getDb();
   const url = new URL(request.url);
   const slotId = url.searchParams.get("slotId");
 

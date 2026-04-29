@@ -4,14 +4,18 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getDb } from "@/db";
 import { events, timeSlots } from "@/db/schema";
 import { sendMail } from "@/lib/mail";
+import { requireEventOwner } from "@/lib/api-auth";
 
-// POST send reminder emails to all reservations for an event
+// POST send reminder emails (auth + ownership required)
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
-  const db = await getDb();
   const { eventId } = await params;
+  const auth = await requireEventOwner(eventId);
+  if ("error" in auth) return auth.error;
+
+  const db = await getDb();
 
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
