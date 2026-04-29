@@ -17,6 +17,7 @@ interface Reservation {
 
 interface TimeSlot {
   id: string;
+  title: string | null;
   startTime: string;
   endTime: string;
   capacity: number;
@@ -49,6 +50,7 @@ export default function EventDetailPage() {
   const [editLocation, setEditLocation] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [addingSlot, setAddingSlot] = useState(false);
+  const [newSlotTitle, setNewSlotTitle] = useState("");
   const [newSlotStart, setNewSlotStart] = useState("11:00");
   const [newSlotEnd, setNewSlotEnd] = useState("12:00");
   const [newSlotCapacity, setNewSlotCapacity] = useState(10);
@@ -178,6 +180,7 @@ export default function EventDetailPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          title: newSlotTitle || undefined,
           startTime: newSlotStart,
           endTime: newSlotEnd,
           capacity: newSlotCapacity,
@@ -449,6 +452,13 @@ export default function EventDetailPage() {
           <div className="rounded-xl bg-white p-4 shadow space-y-3">
             <div className="flex items-center gap-3">
               <input
+                type="text"
+                value={newSlotTitle}
+                onChange={(e) => setNewSlotTitle(e.target.value)}
+                placeholder="タイトル（任意）"
+                className="w-40 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <input
                 type="time"
                 value={newSlotStart}
                 onChange={(e) => setNewSlotStart(e.target.value)}
@@ -494,6 +504,9 @@ export default function EventDetailPage() {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold">
+                    {slot.title && (
+                      <span className="text-blue-600 mr-2">{slot.title}</span>
+                    )}
                     {slot.startTime} - {slot.endTime}
                   </h3>
                   <div className="flex gap-1">

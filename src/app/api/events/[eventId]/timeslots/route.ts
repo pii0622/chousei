@@ -11,6 +11,7 @@ export async function POST(
   const db = await getDb();
   const { eventId } = await params;
   const body = (await request.json()) as {
+    title?: string;
     startTime: string;
     endTime: string;
     capacity: number;
@@ -37,6 +38,7 @@ export async function POST(
   await db.insert(timeSlots).values({
     id,
     eventId,
+    title: body.title || null,
     startTime: body.startTime,
     endTime: body.endTime,
     capacity: body.capacity,
