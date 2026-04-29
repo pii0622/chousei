@@ -13,6 +13,7 @@ interface Reservation {
 
 interface TimeSlot {
   id: string;
+  title: string | null;
   startTime: string;
   endTime: string;
   capacity: number;
@@ -345,6 +346,9 @@ export default function ReservePage() {
                 `}
               >
                 <span className="font-medium">
+                  {slot.title && (
+                    <span className="text-blue-600 mr-1">{slot.title}</span>
+                  )}
                   {slot.startTime} - {slot.endTime}
                 </span>
                 <span

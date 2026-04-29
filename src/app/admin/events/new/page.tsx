@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface TimeSlotInput {
+  title: string;
   startTime: string;
   endTime: string;
   capacity: number;
@@ -16,7 +17,7 @@ export default function NewEventPage() {
   const [date, setDate] = useState("");
   const [location, setLocation] = useState("");
   const [timeSlots, setTimeSlots] = useState<TimeSlotInput[]>([
-    { startTime: "18:00", endTime: "18:30", capacity: 10 },
+    { title: "", startTime: "18:00", endTime: "18:30", capacity: 10 },
   ]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -26,6 +27,7 @@ export default function NewEventPage() {
     setTimeSlots([
       ...timeSlots,
       {
+        title: "",
         startTime: last?.endTime || "18:00",
         endTime: "",
         capacity: last?.capacity || 10,
@@ -63,7 +65,7 @@ export default function NewEventPage() {
         const endH = h + Math.floor(endMinutes / 60);
         const endM = endMinutes % 60;
         const end = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
-        slots.push({ startTime: start, endTime: end, capacity });
+        slots.push({ title: "", startTime: start, endTime: end, capacity });
       }
     }
     setTimeSlots(slots);
@@ -178,6 +180,15 @@ export default function NewEventPage() {
           <div className="space-y-3">
             {timeSlots.map((slot, index) => (
               <div key={index} className="flex items-center gap-3">
+                <input
+                  type="text"
+                  value={slot.title}
+                  onChange={(e) =>
+                    updateSlot(index, "title", e.target.value)
+                  }
+                  placeholder="タイトル（任意）"
+                  className="w-32 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
                 <input
                   type="time"
                   value={slot.startTime}
