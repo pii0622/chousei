@@ -1,26 +1,38 @@
 import { NextResponse } from "next/server";
-import { desc, asc } from "drizzle-orm";
+import { desc, asc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { events, timeSlots } from "@/db/schema";
+import { getSession } from "@/lib/auth";
 
-// GET all events with timeSlots and reservations
+// GET events (filtered by admin, or all for super_admin)
 export async function GET() {
+  const session = await getSession();
   const db = await getDb();
+
   const allEvents = await db.query.events.findMany({
     with: {
       timeSlots: {
         orderBy: asc(timeSlots.sortOrder),
         with: { reservations: true },
       },
+      adminUser: true,
     },
+    ...(session && session.role !== "super_admin"
+      ? { where: eq(events.adminUserId, session.id) }
+      : {}),
     orderBy: desc(events.date),
   });
 
   return NextResponse.json(allEvents);
 }
 
-// POST create event
+// POST create event (must be logged in)
 export async function POST(request: Request) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
   const db = await getDb();
   const body = (await request.json()) as {
     title: string;
@@ -33,6 +45,7 @@ export async function POST(request: Request) {
   const eventId = crypto.randomUUID();
   await db.insert(events).values({
     id: eventId,
+    adminUserId: session.id,
     title: body.title,
     description: body.description || "",
     date: body.date,

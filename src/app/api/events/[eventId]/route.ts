@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { eq, asc } from "drizzle-orm";
 import { getDb } from "@/db";
 import { events, timeSlots, reservations } from "@/db/schema";
+import { getSession } from "@/lib/auth";
 
-// GET single event with reservations
+// GET single event with reservations (public - no auth required for reservation page)
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ eventId: string }> }
@@ -14,6 +15,7 @@ export async function GET(
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
     with: {
+      adminUser: true,
       timeSlots: {
         orderBy: asc(timeSlots.sortOrder),
         with: {

@@ -6,12 +6,21 @@ interface SendMailOptions {
   subject: string;
   html: string;
   text?: string;
+  fromName?: string;
+  replyTo?: string;
 }
 
-export async function sendMail({ to, subject, html, text }: SendMailOptions) {
+export async function sendMail({
+  to,
+  subject,
+  html,
+  text,
+  fromName,
+  replyTo,
+}: SendMailOptions) {
   const { env } = await getCloudflareContext({ async: true });
   const apiKey = (env as Record<string, string | undefined>).RESEND_API_KEY;
-  const from =
+  const mailFrom =
     (env as Record<string, string | undefined>).MAIL_FROM ||
     "onboarding@resend.dev";
 
@@ -21,6 +30,11 @@ export async function sendMail({ to, subject, html, text }: SendMailOptions) {
     return;
   }
 
+  // Format: "Name via Chousei <mail@domain.com>"
+  const from = fromName
+    ? `${fromName} via Chousei <${mailFrom}>`
+    : mailFrom;
+
   const resend = new Resend(apiKey);
   const { error } = await resend.emails.send({
     from,
@@ -28,6 +42,7 @@ export async function sendMail({ to, subject, html, text }: SendMailOptions) {
     subject,
     html,
     text,
+    ...(replyTo ? { replyTo } : {}),
   });
 
   if (error) {

@@ -56,7 +56,10 @@ export async function POST(request: Request) {
   // Get timeslot with current reservations and event
   const timeSlot = await db.query.timeSlots.findFirst({
     where: eq(timeSlots.id, timeSlotId),
-    with: { reservations: true, event: true },
+    with: {
+      reservations: true,
+      event: { with: { adminUser: true } },
+    },
   });
 
   if (!timeSlot) {
@@ -108,11 +111,13 @@ export async function POST(request: Request) {
 
   const event = timeSlot.event;
   const slot = timeSlot;
+  const eventAdmin = event.adminUser;
 
   const { env, ctx } = await getCloudflareContext({ async: true });
   const envMap = env as Record<string, string | undefined>;
   const appUrl = envMap.NEXT_PUBLIC_APP_URL || "";
-  const adminEmail = envMap.ADMIN_EMAIL;
+  const adminEmail = eventAdmin?.email || envMap.ADMIN_EMAIL;
+  const adminName = eventAdmin?.name;
   const cancelUrl = `${appUrl}/reserve/cancel/${reservationId}`;
   const adminEventUrl = `${appUrl}/admin/events/${event.id}`;
 
@@ -175,6 +180,8 @@ ${
       subject: `【予約確認】${event.title}`,
       html: guestHtml,
       text: guestText,
+      fromName: adminName,
+      replyTo: adminEmail,
     }).catch((err) => console.error("[Mail] Failed to send confirmation:", err))
   );
 
