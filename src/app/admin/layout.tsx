@@ -188,28 +188,45 @@ export default function AdminLayout({
         {emailVerified === false && (
           <div className="bg-yellow-50 border-b border-yellow-200">
             <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between">
-              <div className="text-sm text-yellow-800">
-                <strong>メール認証が必要です:</strong>{" "}
-                予約確認メールを送信するには、メールアドレスの認証が必要です。
-                {verifyMessage && (
-                  <span className="ml-2 text-yellow-600">{verifyMessage}</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleRequestVerification}
-                  disabled={verifying}
-                  className="rounded bg-yellow-600 px-3 py-1 text-xs text-white font-medium hover:bg-yellow-700 disabled:opacity-50"
-                >
-                  {verifying ? "送信中..." : "認証メールを送信"}
-                </button>
-                <button
-                  onClick={checkEmailVerification}
-                  className="rounded bg-yellow-100 px-3 py-1 text-xs text-yellow-700 hover:bg-yellow-200"
-                >
-                  状態を更新
-                </button>
-              </div>
+              {user.role === "super_admin" ? (
+                <>
+                  <div className="text-sm text-yellow-800">
+                    <strong>メール認証が必要です:</strong>{" "}
+                    SendGridダッシュボードで送信元メールを認証してください。
+                    {verifyMessage && (
+                      <span className="ml-2 text-yellow-600">{verifyMessage}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleRequestVerification}
+                      disabled={verifying}
+                      className="rounded bg-yellow-600 px-3 py-1 text-xs text-white font-medium hover:bg-yellow-700 disabled:opacity-50"
+                    >
+                      {verifying ? "送信中..." : "SendGridに認証リクエスト"}
+                    </button>
+                    <button
+                      onClick={checkEmailVerification}
+                      className="rounded bg-yellow-100 px-3 py-1 text-xs text-yellow-700 hover:bg-yellow-200"
+                    >
+                      状態を更新
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-sm text-yellow-800">
+                    <strong>メール認証中:</strong>{" "}
+                    現在アプリ管理者がメールアドレスの認証を行っています。認証が完了するまで、予約確認メールは送信されません。
+                  </div>
+                  <button
+                    onClick={checkEmailVerification}
+                    className="rounded bg-yellow-100 px-3 py-1 text-xs text-yellow-700 hover:bg-yellow-200"
+                  >
+                    状態を更新
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
