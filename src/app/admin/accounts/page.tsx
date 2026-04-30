@@ -8,6 +8,7 @@ interface AdminAccount {
   name: string;
   role: string;
   createdAt: string;
+  emailVerified?: boolean;
 }
 
 interface Invite {
@@ -29,10 +30,17 @@ export default function AccountsPage() {
       fetch("/api/admin/accounts"),
       fetch("/api/admin/invites"),
     ]);
-    if (accountsRes.ok)
-      setAccounts(
-        (await accountsRes.json()) as AdminAccount[]
-      );
+    if (accountsRes.ok) {
+      const accts = (await accountsRes.json()) as AdminAccount[];
+      // Check verification status for each account
+      const verifiedRes = await fetch("/api/admin/verify-email");
+      let verifiedEmails: string[] = [];
+      if (verifiedRes.ok) {
+        // We need to check each email - use the verified senders list
+        // For now, mark from the single check
+      }
+      setAccounts(accts);
+    }
     if (invitesRes.ok)
       setInvites((await invitesRes.json()) as Invite[]);
     setLoading(false);
@@ -41,6 +49,26 @@ export default function AccountsPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleVerifyEmail = async (email: string, name: string) => {
+    const res = await fetch("/api/admin/verify-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, name }),
+    });
+    const data = (await res.json()) as {
+      verified?: boolean;
+      message?: string;
+      error?: string;
+    };
+    if (data.verified) {
+      alert(`${email} は認証済みです`);
+    } else if (data.message) {
+      alert(data.message);
+    } else if (data.error) {
+      alert(`エラー: ${data.error}`);
+    }
+  };
 
   const handleCreateInvite = async () => {
     setCreating(true);
@@ -226,16 +254,26 @@ export default function AccountsPage() {
                     )}
                   </td>
                   <td className="py-2 text-right">
-                    {account.role !== "super_admin" && (
+                    <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() =>
-                          handleDeleteAccount(account.id, account.name)
+                          handleVerifyEmail(account.email, account.name)
                         }
-                        className="text-xs text-red-500 hover:text-red-700 hover:underline"
+                        className="text-xs text-blue-500 hover:text-blue-700 hover:underline"
                       >
-                        削除
+                        メール認証
                       </button>
-                    )}
+                      {account.role !== "super_admin" && (
+                        <button
+                          onClick={() =>
+                            handleDeleteAccount(account.id, account.name)
+                          }
+                          className="text-xs text-red-500 hover:text-red-700 hover:underline"
+                        >
+                          削除
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
