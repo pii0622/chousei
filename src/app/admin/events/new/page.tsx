@@ -16,6 +16,7 @@ export default function NewEventPage() {
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
   const [location, setLocation] = useState("");
+  const [multiSlotEnabled, setMultiSlotEnabled] = useState(false);
   const [timeSlots, setTimeSlots] = useState<TimeSlotInput[]>([
     { title: "", startTime: "18:00", endTime: "18:30", capacity: 10 },
   ]);
@@ -80,7 +81,7 @@ export default function NewEventPage() {
       const res = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, date, location, timeSlots }),
+        body: JSON.stringify({ title, description, date, location, multiSlotEnabled, timeSlots }),
       });
 
       if (!res.ok) {
@@ -161,6 +162,20 @@ export default function NewEventPage() {
                 className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
+          </div>
+
+          <div className="mt-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={multiSlotEnabled}
+                onChange={(e) => setMultiSlotEnabled(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm text-gray-700">
+                予約者が複数の時間帯を選択できるようにする
+              </span>
+            </label>
           </div>
         </div>
 

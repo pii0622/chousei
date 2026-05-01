@@ -39,6 +39,9 @@ export const events = sqliteTable(
     description: text("description").notNull().default(""),
     date: text("date").notNull(), // YYYY-MM-DD
     location: text("location").notNull().default(""),
+    multiSlotEnabled: integer("multiSlotEnabled", { mode: "boolean" })
+      .notNull()
+      .default(false),
     createdAt: text("createdAt").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updatedAt").notNull().default(sql`CURRENT_TIMESTAMP`),
   },

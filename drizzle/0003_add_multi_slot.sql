@@ -1,0 +1,1 @@
+ALTER TABLE `Event` ADD `multiSlotEnabled` integer DEFAULT false NOT NULL;

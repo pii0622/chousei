@@ -39,6 +39,7 @@ export async function POST(request: Request) {
     description?: string;
     date: string;
     location?: string;
+    multiSlotEnabled?: boolean;
     timeSlots?: { title?: string; startTime: string; endTime: string; capacity: number }[];
   };
 
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
     description: body.description || "",
     date: body.date,
     location: body.location || "",
+    multiSlotEnabled: body.multiSlotEnabled ?? false,
   });
 
   if (body.timeSlots && body.timeSlots.length > 0) {

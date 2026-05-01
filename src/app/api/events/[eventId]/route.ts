@@ -94,11 +94,14 @@ export async function PATCH(
     title?: string;
     description?: string;
     location?: string;
+    multiSlotEnabled?: boolean;
   };
 
-  const updates: Record<string, string> = {
+  const updates: Record<string, string | boolean> = {
     updatedAt: new Date().toISOString(),
   };
+  if (typeof body.multiSlotEnabled === "boolean")
+    updates.multiSlotEnabled = body.multiSlotEnabled;
   if (typeof body.title === "string") {
     if (!body.title.trim()) {
       return NextResponse.json(
