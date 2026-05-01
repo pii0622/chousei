@@ -98,7 +98,7 @@ export async function PUT(
   return NextResponse.json({ ok: true });
 }
 
-// PATCH update a time slot's title (auth + ownership required)
+// PATCH update a time slot (auth + ownership required)
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ eventId: string }> }
@@ -111,6 +111,9 @@ export async function PATCH(
   const body = (await request.json()) as {
     slotId: string;
     title?: string | null;
+    startTime?: string;
+    endTime?: string;
+    capacity?: number;
   };
 
   if (!body.slotId) {
@@ -125,10 +128,18 @@ export async function PATCH(
     return NextResponse.json({ error: "Time slot not found" }, { status: 404 });
   }
 
-  await db
-    .update(timeSlots)
-    .set({ title: body.title === undefined ? slot.title : (body.title || null) })
-    .where(eq(timeSlots.id, body.slotId));
+  const updates: Record<string, string | number | null> = {};
+  if (body.title !== undefined) updates.title = body.title || null;
+  if (body.startTime) updates.startTime = body.startTime;
+  if (body.endTime) updates.endTime = body.endTime;
+  if (body.capacity && body.capacity > 0) updates.capacity = body.capacity;
+
+  if (Object.keys(updates).length > 0) {
+    await db
+      .update(timeSlots)
+      .set(updates)
+      .where(eq(timeSlots.id, body.slotId));
+  }
 
   return NextResponse.json({ ok: true });
 }

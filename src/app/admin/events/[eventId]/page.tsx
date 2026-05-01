@@ -30,6 +30,7 @@ interface Event {
   description: string;
   date: string;
   location: string;
+  multiSlotEnabled: boolean;
   timeSlots: TimeSlot[];
 }
 
@@ -46,6 +47,7 @@ export default function EventDetailPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editLocation, setEditLocation] = useState("");
+  const [editMultiSlot, setEditMultiSlot] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [addingSlot, setAddingSlot] = useState(false);
   const [viewMode, setViewMode] = useState<"timeslot" | "participant">("timeslot");
@@ -106,6 +108,7 @@ export default function EventDetailPage() {
     setEditTitle(event.title);
     setEditDescription(event.description);
     setEditLocation(event.location);
+    setEditMultiSlot(event.multiSlotEnabled);
     setEditing(true);
   };
 
@@ -127,6 +130,7 @@ export default function EventDetailPage() {
           title: editTitle,
           description: editDescription,
           location: editLocation,
+          multiSlotEnabled: editMultiSlot,
         }),
       });
       if (!res.ok) {
@@ -289,6 +293,19 @@ export default function EventDetailPage() {
               onChange={(e) => setEditLocation(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
+          </div>
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={editMultiSlot}
+                onChange={(e) => setEditMultiSlot(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm text-gray-700">
+                予約者が複数の時間帯を選択できるようにする
+              </span>
+            </label>
           </div>
           <div className="flex gap-2">
             <button
@@ -636,12 +653,58 @@ export default function EventDetailPage() {
                     </button>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <div className="text-sm text-gray-600 font-semibold">
-                    {slot.startTime} - {slot.endTime}
+                <div className="text-right shrink-0 flex items-center gap-2">
+                  <input
+                    type="time"
+                    defaultValue={slot.startTime}
+                    className="border border-transparent hover:border-gray-300 focus:border-blue-500 rounded px-1 py-0.5 text-sm text-gray-600 bg-transparent focus:outline-none w-20 text-right"
+                    onBlur={async (e) => {
+                      if (e.target.value === slot.startTime) return;
+                      await fetch(`/api/events/${eventId}/timeslots`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ slotId: slot.id, startTime: e.target.value }),
+                      });
+                      await refreshEvent();
+                    }}
+                  />
+                  <span className="text-gray-400 text-sm">-</span>
+                  <input
+                    type="time"
+                    defaultValue={slot.endTime}
+                    className="border border-transparent hover:border-gray-300 focus:border-blue-500 rounded px-1 py-0.5 text-sm text-gray-600 bg-transparent focus:outline-none w-20"
+                    onBlur={async (e) => {
+                      if (e.target.value === slot.endTime) return;
+                      await fetch(`/api/events/${eventId}/timeslots`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ slotId: slot.id, endTime: e.target.value }),
+                      });
+                      await refreshEvent();
+                    }}
+                  />
+                  <span className="text-gray-400 text-sm">/</span>
+                  <div className="flex items-center gap-0.5">
+                    <input
+                      type="number"
+                      min={1}
+                      defaultValue={slot.capacity}
+                      className="border border-transparent hover:border-gray-300 focus:border-blue-500 rounded px-1 py-0.5 text-sm bg-transparent focus:outline-none w-12 text-right"
+                      onBlur={async (e) => {
+                        const val = Number(e.target.value);
+                        if (val === slot.capacity || val < 1) return;
+                        await fetch(`/api/events/${eventId}/timeslots`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ slotId: slot.id, capacity: val }),
+                        });
+                        await refreshEvent();
+                      }}
+                    />
+                    <span className="text-xs text-gray-500">名</span>
                   </div>
-                  <div
-                    className={`text-sm ${
+                  <span
+                    className={`text-xs ml-1 ${
                       remaining <= 0
                         ? "text-red-600"
                         : remaining <= 3
@@ -649,9 +712,8 @@ export default function EventDetailPage() {
                           : "text-green-700"
                     }`}
                   >
-                    {used}/{slot.capacity}名
-                    {remaining <= 0 ? " (満席)" : ` (残り${remaining}名)`}
-                  </div>
+                    ({remaining <= 0 ? "満席" : `残${remaining}`})
+                  </span>
                 </div>
               </div>
               {slot.reservations.length === 0 ? (

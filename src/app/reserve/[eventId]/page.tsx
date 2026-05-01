@@ -26,6 +26,7 @@ interface Event {
   description: string;
   date: string;
   location: string;
+  multiSlotEnabled: boolean;
   timeSlots: TimeSlot[];
 }
 
@@ -111,13 +112,20 @@ export default function ReservePage() {
 
   const toggleSlot = (slotId: string) => {
     setSelectedSlots((prev) => {
-      const next = new Set(prev);
-      if (next.has(slotId)) {
-        next.delete(slotId);
-      } else {
-        next.add(slotId);
+      if (event?.multiSlotEnabled) {
+        const next = new Set(prev);
+        if (next.has(slotId)) {
+          next.delete(slotId);
+        } else {
+          next.add(slotId);
+        }
+        return next;
       }
-      return next;
+      // Single selection mode
+      if (prev.has(slotId)) {
+        return new Set();
+      }
+      return new Set([slotId]);
     });
     setPartySize(1);
   };
@@ -495,7 +503,9 @@ export default function ReservePage() {
 
         {/* Time Slots */}
         <h2 className="text-lg font-semibold mb-1">時間帯を選択</h2>
-        <p className="text-sm text-gray-500 mb-3">複数選択できます</p>
+        {event.multiSlotEnabled && (
+          <p className="text-sm text-gray-500 mb-3">複数選択できます</p>
+        )}
         <div className="space-y-2 mb-6">
           {event.timeSlots.map((slot) => {
             const remaining = getRemaining(slot);
@@ -653,7 +663,9 @@ export default function ReservePage() {
             >
               {submitting
                 ? "予約中..."
-                : `予約する（${selectedSlots.size}枠）`}
+                : event.multiSlotEnabled && selectedSlots.size > 1
+                  ? `予約する（${selectedSlots.size}枠）`
+                  : "予約する"}
             </button>
           </form>
         )}
