@@ -138,6 +138,7 @@ export async function POST(request: Request) {
     : false;
   const verifiedFromEmail = adminVerified ? adminEmail : undefined;
   const cancelUrl = `${appUrl}/reserve/cancel/${reservationId}`;
+  const reservePageUrl = `${appUrl}/reserve/${event.id}`;
   const adminEventUrl = `${appUrl}/admin/events/${event.id}`;
 
   const allNames = [name, ...additionalNames];
@@ -169,6 +170,10 @@ ${
     : ""
 }
 
+■ 予約の確認方法
+予約ページの右上にある「予約確認」ボタンから、メールアドレスを入力していつでも予約内容をご確認いただけます。
+${reservePageUrl}
+
 ご来場をお待ちしております。`;
 
   const guestHtml = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#333;line-height:1.6;">
@@ -190,6 +195,8 @@ ${
     ? `<p style="color:#666;font-size:13px;">※ 人数の一部変更をご希望の場合は、<a href="mailto:${adminEmail || ""}">${adminEmail || "管理者"}</a> までご連絡ください。</p>`
     : ""
 }
+<p><strong>■ 予約の確認方法</strong><br>
+<a href="${reservePageUrl}">予約ページ</a>の右上にある「予約確認」ボタンから、メールアドレスを入力していつでも予約内容をご確認いただけます。</p>
 <p>ご来場をお待ちしております。</p>
 </div>`;
 
