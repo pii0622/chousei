@@ -284,9 +284,16 @@ export default function ReservePage() {
               <span className="font-semibold">人数:</span> {partySize}名
             </p>
           </div>
-          <p className="text-sm text-gray-500 mb-6">
+          <p className="text-sm text-gray-500 mb-4">
             確認メールをお送りしました
           </p>
+          <div className="rounded-lg bg-blue-50 p-3 mb-6 text-sm text-blue-800">
+            <p className="font-medium mb-1">予約の確認・変更・キャンセル</p>
+            <p>
+              予約ページの右上にある「予約確認」ボタンから、メールアドレスを入力して
+              いつでも予約内容をご確認いただけます。
+            </p>
+          </div>
           <div className="flex flex-col gap-3">
             {reservationIds.length > 0 && (
               <div className="space-y-2">
@@ -352,7 +359,15 @@ export default function ReservePage() {
     <div className="mx-auto max-w-lg px-4 py-8">
       <div className="rounded-2xl bg-white p-6 shadow-lg">
         {/* Event Info */}
-        <h1 className="text-2xl font-bold mb-1">{event.title}</h1>
+        <div className="flex items-start justify-between mb-1">
+          <h1 className="text-2xl font-bold">{event.title}</h1>
+          <button
+            onClick={() => setLookupOpen(!lookupOpen)}
+            className="shrink-0 rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 transition"
+          >
+            予約確認
+          </button>
+        </div>
         <div className="flex flex-wrap gap-4 mb-4 text-sm text-gray-700">
           <span className="inline-flex items-center gap-1 bg-gray-100 px-3 py-1 rounded-full">
             <svg
@@ -402,87 +417,81 @@ export default function ReservePage() {
         )}
 
         {/* Reservation Lookup */}
-        <div className="mb-6">
-          <button
-            onClick={() => setLookupOpen(!lookupOpen)}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-          >
-            {lookupOpen ? "閉じる" : "予約済みの方はこちら"}
-          </button>
-          {lookupOpen && (
-            <div className="mt-3 rounded-lg bg-gray-50 p-4">
-              <div className="flex gap-2 mb-3">
-                <input
-                  type="email"
-                  value={lookupEmail}
-                  onChange={(e) => setLookupEmail(e.target.value)}
-                  placeholder="メールアドレスを入力"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleLookup();
-                  }}
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <button
-                  onClick={handleLookup}
-                  disabled={lookupLoading || !lookupEmail}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white font-medium hover:bg-blue-700 disabled:opacity-50 transition"
-                >
-                  {lookupLoading ? "検索中..." : "確認"}
-                </button>
-              </div>
-
-              {lookupResults !== null && (
-                lookupResults.length === 0 ? (
-                  <p className="text-sm text-gray-500">このメールアドレスでの予約は見つかりませんでした。</p>
-                ) : (
-                  <div className="space-y-3">
-                    <p className="text-sm font-medium text-gray-700">
-                      {lookupResults[0].name}様の予約（{lookupResults.length}件）
-                    </p>
-                    {lookupResults.map((r) => (
-                      <div
-                        key={r.reservationId}
-                        className="rounded-lg bg-white border p-3"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            {r.timeSlot.title && (
-                              <div className="font-medium text-blue-600">{r.timeSlot.title}</div>
-                            )}
-                            <div className="text-sm text-gray-600">
-                              {r.timeSlot.startTime} - {r.timeSlot.endTime}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-0.5">
-                              {r.partySize}名
-                              {r.additionalNames && (() => {
-                                const names = JSON.parse(r.additionalNames) as string[];
-                                return names.length > 0 ? `（${names.join("、")}）` : "";
-                              })()}
-                            </div>
+        {lookupOpen && (
+          <div className="mb-6 rounded-lg bg-gray-50 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-700">予約を確認する</h3>
+              <button
+                onClick={() => {
+                  setLookupOpen(false);
+                  setLookupResults(null);
+                }}
+                className="text-xs text-gray-400 hover:text-gray-600"
+              >
+                閉じる
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={lookupEmail}
+                onChange={(e) => setLookupEmail(e.target.value)}
+                placeholder="予約時のメールアドレス"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleLookup();
+                }}
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <button
+                onClick={handleLookup}
+                disabled={lookupLoading || !lookupEmail}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white font-medium hover:bg-blue-700 disabled:opacity-50 transition"
+              >
+                {lookupLoading ? "確認中..." : "確認"}
+              </button>
+            </div>
+            {lookupResults !== null && lookupResults.length === 0 && (
+              <p className="mt-3 text-sm text-gray-500">
+                このメールアドレスでの予約は見つかりませんでした。
+              </p>
+            )}
+            {lookupResults !== null && lookupResults.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <p className="text-sm font-medium text-gray-700">
+                  {lookupResults[0].name}様の予約（{lookupResults.length}件）
+                </p>
+                {lookupResults.map((r) => (
+                  <a
+                    key={r.reservationId}
+                    href={`/reserve/cancel/${r.reservationId}`}
+                    className="block rounded-lg bg-white border p-3 hover:bg-blue-50 transition"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">
+                          {r.timeSlot.title || `${r.timeSlot.startTime} - ${r.timeSlot.endTime}`}
+                        </div>
+                        {r.timeSlot.title && (
+                          <div className="text-sm text-gray-500">
+                            {r.timeSlot.startTime} - {r.timeSlot.endTime}
                           </div>
-                          <div className="flex flex-col gap-1.5">
-                            <a
-                              href={`/reserve/cancel/${r.reservationId}`}
-                              className="rounded bg-gray-800 px-3 py-1 text-xs text-white text-center hover:bg-gray-900 transition"
-                            >
-                              詳細・キャンセル
-                            </a>
-                            <a
-                              href={`/api/reservations/${r.reservationId}/ics`}
-                              className="rounded bg-green-500 px-3 py-1 text-xs text-white text-center hover:bg-green-600 transition"
-                            >
-                              カレンダー追加
-                            </a>
-                          </div>
+                        )}
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {r.partySize}名
+                          {r.additionalNames && (() => {
+                            const names = JSON.parse(r.additionalNames) as string[];
+                            return names.length > 0 ? `（${names.join("、")}）` : "";
+                          })()}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )
-              )}
-            </div>
-          )}
-        </div>
+                      <span className="text-xs text-blue-600">詳細 →</span>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Time Slots */}
         <h2 className="text-lg font-semibold mb-1">時間帯を選択</h2>
