@@ -47,7 +47,7 @@ export async function PUT(
     description?: string;
     date: string;
     location?: string;
-    timeSlots?: { startTime: string; endTime: string; capacity: number }[];
+    timeSlots?: { title?: string; startTime: string; endTime: string; capacity: number }[];
   };
 
   await db.delete(timeSlots).where(eq(timeSlots.eventId, eventId));
@@ -68,6 +68,7 @@ export async function PUT(
       body.timeSlots.map((slot, index) => ({
         id: crypto.randomUUID(),
         eventId,
+        title: slot.title || null,
         startTime: slot.startTime,
         endTime: slot.endTime,
         capacity: slot.capacity,

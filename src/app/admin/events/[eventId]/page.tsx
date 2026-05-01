@@ -577,11 +577,27 @@ export default function EventDetailPage() {
             <div key={slot.id} className="rounded-xl bg-white p-6 shadow">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold">
-                    {slot.title && (
-                      <span className="text-blue-600 mr-2">{slot.title}</span>
-                    )}
-                    {slot.startTime} - {slot.endTime}
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <input
+                      type="text"
+                      defaultValue={slot.title || ""}
+                      placeholder="タイトル"
+                      className="w-28 text-blue-600 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none px-0 py-0.5 text-sm"
+                      onBlur={async (e) => {
+                        const newTitle = e.target.value.trim();
+                        if (newTitle === (slot.title || "")) return;
+                        await fetch(`/api/events/${eventId}/timeslots`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            slotId: slot.id,
+                            title: newTitle || null,
+                          }),
+                        });
+                        await refreshEvent();
+                      }}
+                    />
+                    <span>{slot.startTime} - {slot.endTime}</span>
                   </h3>
                   <div className="flex gap-1">
                     <button
