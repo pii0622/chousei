@@ -1,6 +1,7 @@
 "use client";
 
 import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 import type { Components } from "react-markdown";
 
 const components: Components = {
@@ -44,7 +45,9 @@ const components: Components = {
 export default function MarkdownContent({ content }: { content: string }) {
   return (
     <div className="text-gray-600 leading-relaxed">
-      <ReactMarkdown components={components}>{content}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkBreaks]} components={components}>
+        {content}
+      </ReactMarkdown>
     </div>
   );
 }
