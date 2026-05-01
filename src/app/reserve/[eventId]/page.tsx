@@ -235,14 +235,14 @@ export default function ReservePage() {
             <p>
               <span className="font-semibold">時間:</span>
             </p>
-            <div className="ml-4 space-y-1">
+            <div className="ml-4 space-y-2">
               {reservedSlots.map((slot) => (
-                <p key={slot.id}>
+                <div key={slot.id}>
                   {slot.title && (
-                    <span className="text-blue-600 mr-1">{slot.title}</span>
+                    <div className="text-blue-600 font-medium">{slot.title}</div>
                   )}
-                  {slot.startTime} - {slot.endTime}
-                </p>
+                  <div className="text-sm text-gray-700">{slot.startTime} - {slot.endTime}</div>
+                </div>
               ))}
             </div>
             <p>
@@ -394,9 +394,9 @@ export default function ReservePage() {
                   }
                 `}
               >
-                <span className="font-medium flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <span
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center text-xs ${
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center text-xs shrink-0 ${
                       isSelected
                         ? "bg-blue-500 border-blue-500 text-white"
                         : "border-gray-300"
@@ -404,11 +404,15 @@ export default function ReservePage() {
                   >
                     {isSelected && "✓"}
                   </span>
-                  {slot.title && (
-                    <span className="text-blue-600">{slot.title}</span>
-                  )}
-                  {slot.startTime} - {slot.endTime}
-                </span>
+                  <div>
+                    {slot.title && (
+                      <div className="font-medium text-blue-600">{slot.title}</div>
+                    )}
+                    <div className="font-medium text-sm text-gray-700">
+                      {slot.startTime} - {slot.endTime}
+                    </div>
+                  </div>
+                </div>
                 <span
                   className={`text-sm px-3 py-1 rounded-full ${
                     isFull
