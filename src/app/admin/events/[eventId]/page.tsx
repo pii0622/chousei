@@ -577,12 +577,12 @@ export default function EventDetailPage() {
             <div key={slot.id} className="rounded-xl bg-white p-6 shadow">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold flex items-center gap-2">
+                  <div>
                     <input
                       type="text"
                       defaultValue={slot.title || ""}
-                      placeholder="タイトル"
-                      className="w-28 text-blue-600 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none px-0 py-0.5 text-sm"
+                      placeholder="タイトルを入力"
+                      className="block w-full text-blue-600 font-semibold bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none px-0 py-0.5 text-sm"
                       onBlur={async (e) => {
                         const newTitle = e.target.value.trim();
                         if (newTitle === (slot.title || "")) return;
@@ -597,8 +597,8 @@ export default function EventDetailPage() {
                         await refreshEvent();
                       }}
                     />
-                    <span>{slot.startTime} - {slot.endTime}</span>
-                  </h3>
+                    <span className="text-sm text-gray-600 font-semibold">{slot.startTime} - {slot.endTime}</span>
+                  </div>
                   <div className="flex gap-1">
                     <button
                       onClick={() => handleMoveSlot(slotIndex, "up")}
