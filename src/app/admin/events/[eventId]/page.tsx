@@ -577,28 +577,25 @@ export default function EventDetailPage() {
             <div key={slot.id} className="rounded-xl bg-white p-6 shadow">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div>
-                    <input
-                      type="text"
-                      defaultValue={slot.title || ""}
-                      placeholder="タイトルを入力"
-                      className="block w-full text-blue-600 font-semibold bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none px-0 py-0.5 text-sm"
-                      onBlur={async (e) => {
-                        const newTitle = e.target.value.trim();
-                        if (newTitle === (slot.title || "")) return;
-                        await fetch(`/api/events/${eventId}/timeslots`, {
-                          method: "PATCH",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            slotId: slot.id,
-                            title: newTitle || null,
-                          }),
-                        });
-                        await refreshEvent();
-                      }}
-                    />
-                    <span className="text-sm text-gray-600 font-semibold">{slot.startTime} - {slot.endTime}</span>
-                  </div>
+                  <input
+                    type="text"
+                    defaultValue={slot.title || ""}
+                    placeholder="タイトルを入力"
+                    className="text-blue-600 font-semibold bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none px-0 py-0.5"
+                    onBlur={async (e) => {
+                      const newTitle = e.target.value.trim();
+                      if (newTitle === (slot.title || "")) return;
+                      await fetch(`/api/events/${eventId}/timeslots`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          slotId: slot.id,
+                          title: newTitle || null,
+                        }),
+                      });
+                      await refreshEvent();
+                    }}
+                  />
                   <div className="flex gap-1">
                     <button
                       onClick={() => handleMoveSlot(slotIndex, "up")}
@@ -639,18 +636,23 @@ export default function EventDetailPage() {
                     </button>
                   </div>
                 </div>
-                <span
-                  className={`text-sm px-3 py-1 rounded-full ${
-                    remaining <= 0
-                      ? "bg-red-100 text-red-600"
-                      : remaining <= 3
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-green-100 text-green-700"
-                  }`}
-                >
-                  {used}/{slot.capacity}名
-                  {remaining <= 0 ? " (満席)" : ` (残り${remaining}名)`}
-                </span>
+                <div className="text-right shrink-0">
+                  <div className="text-sm text-gray-600 font-semibold">
+                    {slot.startTime} - {slot.endTime}
+                  </div>
+                  <div
+                    className={`text-sm ${
+                      remaining <= 0
+                        ? "text-red-600"
+                        : remaining <= 3
+                          ? "text-yellow-700"
+                          : "text-green-700"
+                    }`}
+                  >
+                    {used}/{slot.capacity}名
+                    {remaining <= 0 ? " (満席)" : ` (残り${remaining}名)`}
+                  </div>
+                </div>
               </div>
               {slot.reservations.length === 0 ? (
                 <p className="text-sm text-gray-400">予約なし</p>
