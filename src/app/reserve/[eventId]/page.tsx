@@ -35,7 +35,7 @@ export default function ReservePage() {
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [partySize, setPartySize] = useState(1);
@@ -43,8 +43,8 @@ export default function ReservePage() {
   const [submitting, setSubmitting] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [error, setError] = useState("");
-  const [reservedSlot, setReservedSlot] = useState<TimeSlot | null>(null);
-  const [reservationId, setReservationId] = useState<string | null>(null);
+  const [reservedSlots, setReservedSlots] = useState<TimeSlot[]>([]);
+  const [reservationIds, setReservationIds] = useState<string[]>([]);
 
   // Keep additionalNames array length in sync with partySize
   useEffect(() => {
@@ -77,35 +77,69 @@ export default function ReservePage() {
     return slot.capacity - used;
   };
 
+  const toggleSlot = (slotId: string) => {
+    setSelectedSlots((prev) => {
+      const next = new Set(prev);
+      if (next.has(slotId)) {
+        next.delete(slotId);
+      } else {
+        next.add(slotId);
+      }
+      return next;
+    });
+    setPartySize(1);
+  };
+
+  const getMinRemaining = (): number => {
+    if (!event || selectedSlots.size === 0) return 10;
+    return Math.min(
+      ...event.timeSlots
+        .filter((s) => selectedSlots.has(s.id))
+        .map((s) => getRemaining(s))
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedSlot) return;
+    if (selectedSlots.size === 0) return;
     setSubmitting(true);
     setError("");
 
     try {
-      const res = await fetch("/api/reservations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          timeSlotId: selectedSlot,
-          name,
-          email,
-          partySize,
-          additionalNames,
-        }),
-      });
+      const ids: string[] = [];
+      const slots: TimeSlot[] = [];
 
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        setError(data.error || "予約に失敗しました");
-        return;
+      for (const slotId of selectedSlots) {
+        const res = await fetch("/api/reservations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            timeSlotId: slotId,
+            name,
+            email,
+            partySize,
+            additionalNames,
+          }),
+        });
+
+        if (!res.ok) {
+          const data = (await res.json()) as { error?: string };
+          const slot = event?.timeSlots.find((s) => s.id === slotId);
+          const label = slot
+            ? `${slot.title ? slot.title + " " : ""}${slot.startTime}-${slot.endTime}`
+            : slotId;
+          setError(`${label}: ${data.error || "予約に失敗しました"}`);
+          return;
+        }
+
+        const data = (await res.json()) as { id: string };
+        ids.push(data.id);
+        const slot = event?.timeSlots.find((s) => s.id === slotId);
+        if (slot) slots.push(slot);
       }
 
-      const data = (await res.json()) as { id: string };
-      setReservationId(data.id);
-      const slot = event?.timeSlots.find((s) => s.id === selectedSlot) || null;
-      setReservedSlot(slot);
+      setReservationIds(ids);
+      setReservedSlots(slots);
       setCompleted(true);
     } catch {
       setError("予約に失敗しました");
@@ -115,10 +149,12 @@ export default function ReservePage() {
   };
 
   const googleCalendarUrl = () => {
-    if (!event || !reservedSlot) return "#";
+    if (!event || reservedSlots.length === 0) return "#";
+    const firstSlot = reservedSlots[0];
+    const lastSlot = reservedSlots[reservedSlots.length - 1];
     const dateClean = event.date.replace(/-/g, "");
-    const startClean = reservedSlot.startTime.replace(/:/g, "") + "00";
-    const endClean = reservedSlot.endTime.replace(/:/g, "") + "00";
+    const startClean = firstSlot.startTime.replace(/:/g, "") + "00";
+    const endClean = lastSlot.endTime.replace(/:/g, "") + "00";
     const url = new URL("https://calendar.google.com/calendar/render");
     url.searchParams.set("action", "TEMPLATE");
     url.searchParams.set("text", event.title);
@@ -132,10 +168,12 @@ export default function ReservePage() {
   };
 
   const downloadICS = () => {
-    if (!event || !reservedSlot) return;
+    if (!event || reservedSlots.length === 0) return;
+    const firstSlot = reservedSlots[0];
+    const lastSlot = reservedSlots[reservedSlots.length - 1];
     const dateClean = event.date.replace(/-/g, "");
-    const startClean = reservedSlot.startTime.replace(/:/g, "") + "00";
-    const endClean = reservedSlot.endTime.replace(/:/g, "") + "00";
+    const startClean = firstSlot.startTime.replace(/:/g, "") + "00";
+    const endClean = lastSlot.endTime.replace(/:/g, "") + "00";
     const ics = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
@@ -194,12 +232,19 @@ export default function ReservePage() {
             <p>
               <span className="font-semibold">日付:</span> {event.date}
             </p>
-            {reservedSlot && (
-              <p>
-                <span className="font-semibold">時間:</span>{" "}
-                {reservedSlot.startTime} - {reservedSlot.endTime}
-              </p>
-            )}
+            <p>
+              <span className="font-semibold">時間:</span>
+            </p>
+            <div className="ml-4 space-y-1">
+              {reservedSlots.map((slot) => (
+                <p key={slot.id}>
+                  {slot.title && (
+                    <span className="text-blue-600 mr-1">{slot.title}</span>
+                  )}
+                  {slot.startTime} - {slot.endTime}
+                </p>
+              ))}
+            </div>
             <p>
               <span className="font-semibold">お名前:</span> {name}
             </p>
@@ -211,13 +256,19 @@ export default function ReservePage() {
             確認メールをお送りしました
           </p>
           <div className="flex flex-col gap-3">
-            {reservationId && (
-              <a
-                href={`/reserve/cancel/${reservationId}`}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-800 px-6 py-3 text-white font-medium hover:bg-gray-900 transition"
-              >
-                予約の詳細・キャンセルはこちら
-              </a>
+            {reservationIds.length > 0 && (
+              <div className="space-y-2">
+                {reservationIds.map((rid, i) => (
+                  <a
+                    key={rid}
+                    href={`/reserve/cancel/${rid}`}
+                    className="block text-center rounded-lg bg-gray-800 px-6 py-2.5 text-white font-medium hover:bg-gray-900 transition text-sm"
+                  >
+                    {reservedSlots[i]?.title && `${reservedSlots[i].title} `}
+                    {reservedSlots[i]?.startTime}-{reservedSlots[i]?.endTime} の詳細・キャンセル
+                  </a>
+                ))}
+              </div>
             )}
             <a
               href={googleCalendarUrl()}
@@ -319,20 +370,18 @@ export default function ReservePage() {
         )}
 
         {/* Time Slots */}
-        <h2 className="text-lg font-semibold mb-3">時間帯を選択</h2>
+        <h2 className="text-lg font-semibold mb-1">時間帯を選択</h2>
+        <p className="text-sm text-gray-500 mb-3">複数選択できます</p>
         <div className="space-y-2 mb-6">
           {event.timeSlots.map((slot) => {
             const remaining = getRemaining(slot);
             const isFull = remaining <= 0;
-            const isSelected = selectedSlot === slot.id;
+            const isSelected = selectedSlots.has(slot.id);
             return (
               <button
                 key={slot.id}
                 onClick={() => {
-                  if (!isFull) {
-                    setSelectedSlot(slot.id);
-                    setPartySize(1);
-                  }
+                  if (!isFull) toggleSlot(slot.id);
                 }}
                 disabled={isFull}
                 className={`w-full flex items-center justify-between rounded-lg border-2 p-4 transition
@@ -345,9 +394,18 @@ export default function ReservePage() {
                   }
                 `}
               >
-                <span className="font-medium">
+                <span className="font-medium flex items-center gap-2">
+                  <span
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center text-xs ${
+                      isSelected
+                        ? "bg-blue-500 border-blue-500 text-white"
+                        : "border-gray-300"
+                    }`}
+                  >
+                    {isSelected && "✓"}
+                  </span>
                   {slot.title && (
-                    <span className="text-blue-600 mr-1">{slot.title}</span>
+                    <span className="text-blue-600">{slot.title}</span>
                   )}
                   {slot.startTime} - {slot.endTime}
                 </span>
@@ -370,7 +428,7 @@ export default function ReservePage() {
         </div>
 
         {/* Reservation Form */}
-        {selectedSlot && (
+        {selectedSlots.size > 0 && (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="border-t pt-4">
               <h2 className="text-lg font-semibold mb-3">予約情報を入力</h2>
@@ -415,12 +473,7 @@ export default function ReservePage() {
               >
                 {Array.from(
                   {
-                    length: Math.min(
-                      10,
-                      getRemaining(
-                        event.timeSlots.find((s) => s.id === selectedSlot)!
-                      )
-                    ),
+                    length: Math.min(10, getMinRemaining()),
                   },
                   (_, i) => i + 1
                 ).map((n) => (
@@ -468,7 +521,9 @@ export default function ReservePage() {
               disabled={submitting}
               className="w-full rounded-lg bg-blue-600 px-6 py-3 text-white font-medium hover:bg-blue-700 disabled:opacity-50 transition"
             >
-              {submitting ? "予約中..." : "予約する"}
+              {submitting
+                ? "予約中..."
+                : `予約する（${selectedSlots.size}枠）`}
             </button>
           </form>
         )}
