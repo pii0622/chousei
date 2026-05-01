@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     description?: string;
     date: string;
     location?: string;
-    timeSlots?: { startTime: string; endTime: string; capacity: number }[];
+    timeSlots?: { title?: string; startTime: string; endTime: string; capacity: number }[];
   };
 
   const eventId = crypto.randomUUID();
@@ -57,6 +57,7 @@ export async function POST(request: Request) {
       body.timeSlots.map((slot, index) => ({
         id: crypto.randomUUID(),
         eventId,
+        title: slot.title || null,
         startTime: slot.startTime,
         endTime: slot.endTime,
         capacity: slot.capacity,

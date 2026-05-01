@@ -98,6 +98,41 @@ export async function PUT(
   return NextResponse.json({ ok: true });
 }
 
+// PATCH update a time slot's title (auth + ownership required)
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ eventId: string }> }
+) {
+  const { eventId } = await params;
+  const auth = await requireEventOwner(eventId);
+  if ("error" in auth) return auth.error;
+
+  const db = await getDb();
+  const body = (await request.json()) as {
+    slotId: string;
+    title?: string | null;
+  };
+
+  if (!body.slotId) {
+    return NextResponse.json({ error: "slotId is required" }, { status: 400 });
+  }
+
+  const slot = await db.query.timeSlots.findFirst({
+    where: eq(timeSlots.id, body.slotId),
+  });
+
+  if (!slot || slot.eventId !== eventId) {
+    return NextResponse.json({ error: "Time slot not found" }, { status: 404 });
+  }
+
+  await db
+    .update(timeSlots)
+    .set({ title: body.title === undefined ? slot.title : (body.title || null) })
+    .where(eq(timeSlots.id, body.slotId));
+
+  return NextResponse.json({ ok: true });
+}
+
 // DELETE a time slot (auth + ownership required, only if no reservations)
 export async function DELETE(
   request: Request,
