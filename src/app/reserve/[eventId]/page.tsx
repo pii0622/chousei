@@ -394,7 +394,7 @@ export default function ReservePage() {
                   }
                 `}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
                   <span
                     className={`w-5 h-5 rounded border-2 flex items-center justify-center text-xs shrink-0 ${
                       isSelected
@@ -404,28 +404,30 @@ export default function ReservePage() {
                   >
                     {isSelected && "✓"}
                   </span>
-                  <div>
-                    {slot.title && (
-                      <div className="font-medium text-blue-600">{slot.title}</div>
-                    )}
-                    <div className="font-medium text-sm text-gray-700">
+                  <span className="font-medium text-left">
+                    {slot.title || `${slot.startTime} - ${slot.endTime}`}
+                  </span>
+                </div>
+                <div className="text-right shrink-0">
+                  {slot.title && (
+                    <div className="text-sm text-gray-600">
                       {slot.startTime} - {slot.endTime}
                     </div>
+                  )}
+                  <div
+                    className={`text-sm ${
+                      isFull
+                        ? "text-red-500"
+                        : remaining <= 3
+                          ? "text-yellow-700"
+                          : "text-green-700"
+                    }`}
+                  >
+                    {isFull
+                      ? "満席"
+                      : `残り ${remaining}/${slot.capacity} 席`}
                   </div>
                 </div>
-                <span
-                  className={`text-sm px-3 py-1 rounded-full ${
-                    isFull
-                      ? "bg-red-100 text-red-500"
-                      : remaining <= 3
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-green-100 text-green-700"
-                  }`}
-                >
-                  {isFull
-                    ? "満席"
-                    : `残り ${remaining}/${slot.capacity} 席`}
-                </span>
               </button>
             );
           })}
