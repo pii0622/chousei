@@ -174,7 +174,7 @@ export default function AccountsPage() {
                 </button>
                 <span className="text-xs text-gray-400">
                   期限:{" "}
-                  {new Date(invite.expiresAt).toLocaleDateString("ja-JP")}
+                  {new Date(invite.expiresAt.endsWith("Z") ? invite.expiresAt : invite.expiresAt + "Z").toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}
                 </span>
               </div>
             ))}
@@ -249,8 +249,8 @@ export default function AccountsPage() {
                     </span>
                   </td>
                   <td className="py-2 pr-4 text-gray-400">
-                    {new Date(account.createdAt).toLocaleDateString(
-                      "ja-JP"
+                    {new Date(account.createdAt.endsWith("Z") ? account.createdAt : account.createdAt + "Z").toLocaleDateString(
+                      "ja-JP", { timeZone: "Asia/Tokyo" }
                     )}
                   </td>
                   <td className="py-2 text-right">
