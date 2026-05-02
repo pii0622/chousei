@@ -63,7 +63,7 @@ export async function GET(
   const header = "代表者,メールアドレス,人数,同伴者,開始時間,終了時間,予約日時";
   const csvRows = rows.map(
     (r) =>
-      `"${r.name}","${r.email}",${r.partySize},"${r.additionalNames.join(" / ")}","${r.startTime}","${r.endTime}","${new Date(r.createdAt).toLocaleString("ja-JP")}"`
+      `"${r.name}","${r.email}",${r.partySize},"${r.additionalNames.join(" / ")}","${r.startTime}","${r.endTime}","${new Date(r.createdAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}"`
   );
   const csv = BOM + [header, ...csvRows].join("\n");
 
