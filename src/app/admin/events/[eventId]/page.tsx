@@ -752,7 +752,7 @@ export default function EventDetailPage() {
                             </td>
                             <td className="py-2 pr-4">{r.partySize}名</td>
                             <td className="py-2 pr-4 text-gray-400">
-                              {new Date(r.createdAt).toLocaleString("ja-JP")}
+                              {new Date(r.createdAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}
                             </td>
                             <td className="py-2 text-right">
                               <button

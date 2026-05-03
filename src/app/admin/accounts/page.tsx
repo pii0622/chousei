@@ -174,7 +174,7 @@ export default function AccountsPage() {
                 </button>
                 <span className="text-xs text-gray-400">
                   期限:{" "}
-                  {new Date(invite.expiresAt).toLocaleDateString("ja-JP")}
+                  {new Date(invite.expiresAt).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}
                 </span>
               </div>
             ))}
